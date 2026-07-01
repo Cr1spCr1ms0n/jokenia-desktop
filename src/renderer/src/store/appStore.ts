@@ -1,5 +1,16 @@
 import { create } from 'zustand'
-import type { CartLineItem, PaymentMethodOption, SaleTypeOption, TabId } from '@/types'
+import type {
+  CartLineItem,
+  OnlinePlatform,
+  PaymentEntry,
+  SaleChannel,
+  SaleTypeOption,
+  TabId
+} from '@/types'
+
+function blankPayment(): PaymentEntry {
+  return { id: crypto.randomUUID(), method: null, amount: '', reference_number: '' }
+}
 
 interface AppState {
   activeTab: TabId
@@ -10,8 +21,9 @@ interface AppState {
   // Checkout
   cart: CartLineItem[]
   saleType: SaleTypeOption
-  paymentMethod: PaymentMethodOption
-  referenceNumber: string
+  saleChannel: SaleChannel
+  onlinePlatform: OnlinePlatform | null
+  payments: PaymentEntry[]
   customerEmail: string
   isConfirming: boolean
   lastSaleId: string | null
@@ -20,8 +32,13 @@ interface AppState {
   incrementQuantity: (variation_id: string) => void
   decrementQuantity: (variation_id: string) => void
   setSaleType: (type: SaleTypeOption) => void
-  setPaymentMethod: (method: PaymentMethodOption) => void
-  setReferenceNumber: (ref: string) => void
+  setSaleChannel: (channel: SaleChannel) => void
+  setOnlinePlatform: (platform: OnlinePlatform | null) => void
+  addPayment: () => void
+  removePayment: (id: string) => void
+  updatePaymentMethod: (id: string, method: PaymentEntry['method']) => void
+  updatePaymentAmount: (id: string, amount: string) => void
+  updatePaymentReference: (id: string, reference_number: string) => void
   setCustomerEmail: (email: string) => void
   setIsConfirming: (val: boolean) => void
   setLastSaleId: (id: string | null) => void
@@ -36,8 +53,9 @@ export const useAppStore = create<AppState>((set) => ({
 
   cart: [],
   saleType: 'retail',
-  paymentMethod: 'cash',
-  referenceNumber: '',
+  saleChannel: 'in_shop',
+  onlinePlatform: null,
+  payments: [blankPayment()],
   customerEmail: '',
   isConfirming: false,
   lastSaleId: null,
@@ -88,8 +106,31 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   setSaleType: (saleType) => set({ saleType }),
-  setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
-  setReferenceNumber: (referenceNumber) => set({ referenceNumber }),
+  setSaleChannel: (saleChannel) => set({ saleChannel }),
+  setOnlinePlatform: (onlinePlatform) => set({ onlinePlatform }),
+
+  addPayment: () => set((state) => ({ payments: [...state.payments, blankPayment()] })),
+
+  removePayment: (id) =>
+    set((state) => ({
+      payments: state.payments.length > 1 ? state.payments.filter((p) => p.id !== id) : state.payments
+    })),
+
+  updatePaymentMethod: (id, method) =>
+    set((state) => ({
+      payments: state.payments.map((p) => (p.id === id ? { ...p, method } : p))
+    })),
+
+  updatePaymentAmount: (id, amount) =>
+    set((state) => ({
+      payments: state.payments.map((p) => (p.id === id ? { ...p, amount } : p))
+    })),
+
+  updatePaymentReference: (id, reference_number) =>
+    set((state) => ({
+      payments: state.payments.map((p) => (p.id === id ? { ...p, reference_number } : p))
+    })),
+
   setCustomerEmail: (customerEmail) => set({ customerEmail }),
   setIsConfirming: (isConfirming) => set({ isConfirming }),
   setLastSaleId: (lastSaleId) => set({ lastSaleId }),
@@ -102,8 +143,10 @@ export const useAppStore = create<AppState>((set) => ({
     set({
       cart: [],
       customerEmail: '',
-      referenceNumber: '',
-      isConfirming: false
+      isConfirming: false,
+      saleChannel: 'in_shop',
+      onlinePlatform: null,
+      payments: [blankPayment()]
     })
 }))
 

@@ -39,25 +39,35 @@ function createWindow(): void {
   }
 }
 
-// Creates a hidden window, loads the label HTML, prints it, and tears the
-// window down. Label content rendering (barcode, serial, SKU, size, price)
-// is scaffolded here only — the full label renderer lands in a later session.
-function printLabel(htmlContent: string): Promise<void> {
+// Creates a hidden window, loads the label HTML, prints it at the label's
+// physical size (converted mm -> microns, the unit Chromium's print API
+// expects), and tears the window down.
+function printLabel(payload: { html: string; widthMm: number; heightMm: number }): Promise<void> {
   return new Promise((resolve, reject) => {
     const labelWindow = new BrowserWindow({ show: false })
 
     labelWindow.webContents.once('did-finish-load', () => {
-      labelWindow.webContents.print({ silent: false }, (success, errorType) => {
-        labelWindow.destroy()
-        if (success) {
-          resolve()
-        } else {
-          reject(new Error(errorType))
+      labelWindow.webContents.print(
+        {
+          silent: false,
+          printBackground: true,
+          pageSize: {
+            width: payload.widthMm * 1000,
+            height: payload.heightMm * 1000
+          }
+        },
+        (success, errorType) => {
+          labelWindow.destroy()
+          if (success) {
+            resolve()
+          } else {
+            reject(new Error(errorType))
+          }
         }
-      })
+      )
     })
 
-    labelWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`)
+    labelWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(payload.html)}`)
   })
 }
 
@@ -75,7 +85,10 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  ipcMain.handle('print-label', (_event, htmlContent: string) => printLabel(htmlContent))
+  ipcMain.handle(
+    'print-label',
+    (_event, payload: { html: string; widthMm: number; heightMm: number }) => printLabel(payload)
+  )
   ipcMain.handle('app-get-version', () => app.getVersion())
   ipcMain.handle('check-for-updates', () => autoUpdater.checkForUpdatesAndNotify())
   ipcMain.handle('preferences-get', (_event, key: string) => preferencesStore.get(key))

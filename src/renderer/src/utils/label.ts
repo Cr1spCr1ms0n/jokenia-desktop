@@ -26,12 +26,13 @@ export function generateLabelHtml(data: LabelData): string {
   const heightPx = Math.round(LABEL.heightMm * MM_TO_PX)
 
   return `<!DOCTYPE html><html><head><style>
+    @page { size: ${LABEL.widthMm}mm ${LABEL.heightMm}mm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { width: ${widthPx}px; height: ${heightPx}px; font-family: 'DM Sans', sans-serif; padding: 3px 4px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
     .barcode { display: block; width: 100%; height: 36px; object-fit: contain; }
     .serial { font-size: 6px; color: #555; letter-spacing: 0.3px; text-align: center; margin-top: 1px; font-family: monospace; }
     .row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 2px; }
-    .sku { font-size: 6px; color: #3D3D2E; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 65%; }
+    .sku { font-size: 5px; color: #3D3D2E; font-weight: 500; white-space: normal; word-break: break-all; }
     .price { font-size: 8px; font-weight: 700; color: #3D3D2E; white-space: nowrap; }
     .size { font-size: 6px; color: #555; }
   </style></head><body>
@@ -49,5 +50,5 @@ export function generateLabelHtml(data: LabelData): string {
 
 export async function printLabel(data: LabelData): Promise<void> {
   const html = generateLabelHtml(data)
-  await window.electron.print(html)
+  await window.electron.print({ html, widthMm: LABEL.widthMm, heightMm: LABEL.heightMm })
 }

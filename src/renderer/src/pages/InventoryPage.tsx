@@ -174,6 +174,7 @@ function InventoryPage(): React.JSX.Element {
             <thead className="sticky top-0 bg-jokenia-cream2">
               <tr className="text-jokenia-dark2">
                 <th className="px-3 py-2 font-medium">Serial</th>
+                <th className="px-3 py-2 font-medium">Name</th>
                 <th className="px-3 py-2 font-medium">SKU</th>
                 <th className="px-3 py-2 font-medium">Size</th>
                 <th className="px-3 py-2 font-medium">Price</th>
@@ -186,6 +187,7 @@ function InventoryPage(): React.JSX.Element {
                   <td className="px-3 py-2 font-mono text-xs text-jokenia-dark2">
                     {item.serial_number}
                   </td>
+                  <td className="px-3 py-2 text-jokenia-dark">{item.type_name}</td>
                   <td className="px-3 py-2 text-jokenia-dark">{item.sku}</td>
                   <td className="px-3 py-2 text-jokenia-dark2">{buildSizeLabel(item)}</td>
                   <td className="px-3 py-2 text-jokenia-dark">

@@ -1,7 +1,7 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
 interface JokeniaAPI {
-  print: (htmlContent: string) => Promise<void>
+  print: (payload: { html: string; widthMm: number; heightMm: number }) => Promise<void>
   getVersion: () => Promise<string>
   checkForUpdates: () => Promise<void>
   getPreference: (key: string) => Promise<unknown>

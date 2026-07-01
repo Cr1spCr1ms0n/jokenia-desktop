@@ -14,9 +14,13 @@ export type TabId =
 
 export type ItemStatus = 'in_stock' | 'sold' | 'returned' | 'damaged' | 'transferred'
 
-export type SaleTypeOption = 'retail' | 'wholesale'
+export type SaleTypeOption = 'retail' | 'manual'
 
 export type PaymentMethodOption = 'cash' | 'card' | 'mpesa'
+
+export type SaleChannel = 'in_shop' | 'online'
+
+export type OnlinePlatform = 'whatsapp' | 'instagram' | 'other'
 
 export interface CartLineItem {
   variation_id: string
@@ -26,6 +30,13 @@ export interface CartLineItem {
   unit_price: number
   quantity: number
   stock_count: number
+}
+
+export interface PaymentEntry {
+  id: string
+  method: PaymentMethodOption | null
+  amount: string
+  reference_number: string
 }
 
 export interface TabDefinition {
