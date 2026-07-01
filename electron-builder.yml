@@ -1,0 +1,23 @@
+appId: com.jokenia.operations-desktop
+productName: Jokenia Operations
+directories:
+  buildResources: resources
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts}'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,*.md,*.txt}'
+  - '!{tailwind.config.js,postcss.config.js}'
+asarUnpack:
+  - resources/**
+win:
+  executableName: jokenia-operations
+nsis:
+  artifactName: '${name}-${version}-setup.${ext}'
+  shortcutName: '${productName}'
+  uninstallDisplayName: '${productName}'
+  createDesktopShortcut: always
+publish:
+  provider: github
+  private: true
