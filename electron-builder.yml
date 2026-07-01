@@ -13,11 +13,17 @@ asarUnpack:
   - resources/**
 win:
   executableName: jokenia-operations
+  target: nsis
+  icon: resources/icon.png
 nsis:
-  artifactName: '${name}-${version}-setup.${ext}'
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: Jokenia-Operations-Setup-${version}.exe
   shortcutName: '${productName}'
   uninstallDisplayName: '${productName}'
   createDesktopShortcut: always
 publish:
   provider: github
-  private: true
+  owner: Cr1spCr1ms0n
+  repo: jokenia-desktop
+  private: false

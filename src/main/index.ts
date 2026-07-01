@@ -83,12 +83,23 @@ app.whenReady().then(() => {
     preferencesStore.set(key, value)
   })
 
+  autoUpdater.on('update-available', () => {
+    // Optional: notify the user an update is downloading
+  })
+  autoUpdater.on('update-downloaded', () => {
+    // Notify user and offer to restart, or just let it apply on next launch
+    autoUpdater.autoInstallOnAppQuit = true
+  })
+
   createWindow()
 
   // Avoid blocking startup — check for updates a few seconds after boot.
-  setTimeout(() => {
-    autoUpdater.checkForUpdatesAndNotify()
-  }, 3000)
+  // Skipped in dev since there's no packaged app to update.
+  if (!is.dev) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdatesAndNotify()
+    }, 3000)
+  }
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
