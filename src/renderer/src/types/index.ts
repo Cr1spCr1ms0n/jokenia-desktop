@@ -22,6 +22,8 @@ export type SaleChannel = 'in_shop' | 'online'
 
 export type OnlinePlatform = 'whatsapp' | 'instagram' | 'other'
 
+export type DiscountType = 'percentage' | 'fixed'
+
 export interface CartLineItem {
   variation_id: string
   product_type: string
@@ -30,6 +32,8 @@ export interface CartLineItem {
   unit_price: number
   quantity: number
   stock_count: number
+  discountType: DiscountType | null
+  discountValue: number | null
 }
 
 export interface PaymentEntry {

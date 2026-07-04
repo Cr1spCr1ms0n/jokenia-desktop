@@ -137,7 +137,10 @@ function Register(): React.JSX.Element {
           p_items: cart.map((item) => ({
             variation_id: item.variation_id,
             quantity: item.quantity,
-            unit_price: item.unit_price
+            unit_price: item.unit_price,
+            ...(item.discountType && item.discountValue != null
+              ? { discount_type: item.discountType, discount_value: item.discountValue }
+              : {})
           })),
           p_payments: paymentPayload,
           p_customer_email: customerEmail.trim() || null,

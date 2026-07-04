@@ -1,12 +1,24 @@
 import { create } from 'zustand'
 import type {
   CartLineItem,
+  DiscountType,
   OnlinePlatform,
   PaymentEntry,
   SaleChannel,
   SaleTypeOption,
   TabId
 } from '@/types'
+
+export function lineDiscountAmount(item: CartLineItem): number {
+  const gross = item.unit_price * item.quantity
+  if (!item.discountType || !item.discountValue || item.discountValue <= 0) return 0
+  if (item.discountType === 'percentage') return gross * (item.discountValue / 100)
+  return Math.min(item.discountValue, gross)
+}
+
+export function lineNet(item: CartLineItem): number {
+  return item.unit_price * item.quantity - lineDiscountAmount(item)
+}
 
 function blankPayment(): PaymentEntry {
   return { id: crypto.randomUUID(), method: null, amount: '', reference_number: '' }
@@ -27,10 +39,13 @@ interface AppState {
   customerEmail: string
   isConfirming: boolean
   lastSaleId: string | null
-  addOrIncrementItem: (item: Omit<CartLineItem, 'quantity'>) => void
+  addOrIncrementItem: (
+    item: Omit<CartLineItem, 'quantity' | 'discountType' | 'discountValue'>
+  ) => void
   removeItem: (variation_id: string) => void
   incrementQuantity: (variation_id: string) => void
   decrementQuantity: (variation_id: string) => void
+  setItemDiscount: (variation_id: string, type: DiscountType | null, value: number | null) => void
   setSaleType: (type: SaleTypeOption) => void
   setSaleChannel: (channel: SaleChannel) => void
   setOnlinePlatform: (platform: OnlinePlatform | null) => void
@@ -64,7 +79,9 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => {
       const existing = state.cart.find((line) => line.variation_id === item.variation_id)
       if (!existing) {
-        return { cart: [...state.cart, { ...item, quantity: 1 }] }
+        return {
+          cart: [...state.cart, { ...item, quantity: 1, discountType: null, discountValue: null }]
+        }
       }
       return {
         cart: state.cart.map((line) =>
@@ -104,6 +121,13 @@ export const useAppStore = create<AppState>((set) => ({
         )
       }
     }),
+
+  setItemDiscount: (variation_id, discountType, discountValue) =>
+    set((state) => ({
+      cart: state.cart.map((line) =>
+        line.variation_id === variation_id ? { ...line, discountType, discountValue } : line
+      )
+    })),
 
   setSaleType: (saleType) => set({ saleType }),
   setSaleChannel: (saleChannel) => set({ saleChannel }),
@@ -151,4 +175,4 @@ export const useAppStore = create<AppState>((set) => ({
 }))
 
 export const selectCartTotal = (state: AppState): number =>
-  state.cart.reduce((sum, line) => sum + line.unit_price * line.quantity, 0)
+  state.cart.reduce((sum, line) => sum + lineNet(line), 0)
