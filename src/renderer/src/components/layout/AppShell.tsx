@@ -7,6 +7,7 @@ import BatchesPage from '@/pages/BatchesPage'
 import StaffPage from '@/pages/StaffPage'
 import ConsigneesPage from '@/pages/ConsigneesPage'
 import PartnersPage from '@/pages/PartnersPage'
+import MarketsPage from '@/pages/MarketsPage'
 import ServicesPage from '@/pages/ServicesPage'
 import ReconciliationPage from '@/pages/ReconciliationPage'
 import ExpensesPage from '@/pages/ExpensesPage'
@@ -32,6 +33,7 @@ function AppShell({ role, userEmail }: AppShellProps): React.JSX.Element {
             <Route path="/staff" element={<StaffPage />} />
             <Route path="/consignees" element={<ConsigneesPage />} />
             <Route path="/partners" element={<PartnersPage />} />
+            <Route path="/markets" element={<MarketsPage />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/reconciliation" element={<ReconciliationPage />} />
             {role === 'super_admin' && <Route path="/expenses" element={<ExpensesPage />} />}

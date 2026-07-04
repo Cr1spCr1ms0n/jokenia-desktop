@@ -7,6 +7,7 @@ const TABS: TabDefinition[] = [
   { id: 'staff', label: 'Staff' },
   { id: 'consignees', label: 'Consignees' },
   { id: 'partners', label: 'Partners' },
+  { id: 'markets', label: 'Markets' },
   { id: 'services', label: 'Services' },
   { id: 'reconciliation', label: 'Reconciliation' },
   { id: 'expenses', label: 'Expenses' },

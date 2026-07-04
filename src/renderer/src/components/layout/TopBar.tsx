@@ -10,6 +10,7 @@ const TAB_PATHS: Record<TabId, string> = {
   staff: '/staff',
   consignees: '/consignees',
   partners: '/partners',
+  markets: '/markets',
   services: '/services',
   reconciliation: '/reconciliation',
   expenses: '/expenses',

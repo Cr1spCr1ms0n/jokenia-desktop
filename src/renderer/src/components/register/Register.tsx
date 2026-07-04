@@ -1,7 +1,15 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { selectCartTotal, useAppStore } from '@/store/appStore'
-import type { OnlinePlatform, PaymentMethodOption, SaleChannel, SaleTypeOption } from '@/types'
+import type {
+  MarketEvent,
+  OnlinePlatform,
+  PaymentMethodOption,
+  SaleChannel,
+  SaleTypeOption
+} from '@/types'
+import { printReceipt, type ReceiptData } from '@/utils/receipt'
 import ScanInput from './ScanInput'
 import CartItem from './CartItem'
 
@@ -12,7 +20,8 @@ const SALE_TYPES: { id: SaleTypeOption; label: string }[] = [
 
 const CHANNEL_OPTIONS: { id: SaleChannel; label: string }[] = [
   { id: 'in_shop', label: 'In Shop' },
-  { id: 'online', label: 'Online' }
+  { id: 'online', label: 'Online' },
+  { id: 'market', label: 'Market' }
 ]
 
 const PLATFORM_OPTIONS: { id: OnlinePlatform; label: string }[] = [
@@ -47,6 +56,8 @@ function Register(): React.JSX.Element {
   const setSaleChannel = useAppStore((state) => state.setSaleChannel)
   const onlinePlatform = useAppStore((state) => state.onlinePlatform)
   const setOnlinePlatform = useAppStore((state) => state.setOnlinePlatform)
+  const marketEventId = useAppStore((state) => state.marketEventId)
+  const setMarketEventId = useAppStore((state) => state.setMarketEventId)
   const payments = useAppStore((state) => state.payments)
   const addPayment = useAppStore((state) => state.addPayment)
   const removePayment = useAppStore((state) => state.removePayment)
@@ -63,6 +74,22 @@ function Register(): React.JSX.Element {
 
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [lastSaleTotal, setLastSaleTotal] = useState<number | null>(null)
+  const [lastSaleReceipt, setLastSaleReceipt] = useState<Omit<
+    ReceiptData,
+    'saleId' | 'total' | 'saleDate'
+  > | null>(null)
+
+  const { data: marketEvents } = useQuery({
+    queryKey: ['market-events-active'],
+    queryFn: async (): Promise<MarketEvent[]> => {
+      const { data, error } = await supabase.rpc('get_market_events', {
+        p_include_inactive: false
+      })
+      if (error) throw error
+      return (data ?? []) as MarketEvent[]
+    },
+    enabled: saleChannel === 'market'
+  })
 
   // Manual sale fields — not shared elsewhere, kept local to this component.
   const [manualDescription, setManualDescription] = useState('')
@@ -78,6 +105,7 @@ function Register(): React.JSX.Element {
   const paymentsTotal = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
   const paymentValid =
     hasItems && Math.abs(paymentsTotal - total) < 0.01 && payments.every((p) => p.method !== null)
+  const marketEventRequired = saleChannel === 'market' && !marketEventId
 
   function resetManualFields(): void {
     setManualDescription('')
@@ -107,6 +135,11 @@ function Register(): React.JSX.Element {
       return
     }
 
+    if (marketEventRequired) {
+      setConfirmError('Select a market event to continue.')
+      return
+    }
+
     if (!paymentValid) {
       setConfirmError(
         `Payments total KES ${paymentsTotal.toLocaleString()} must equal sale total KES ${total.toLocaleString()}.`
@@ -122,6 +155,7 @@ function Register(): React.JSX.Element {
       reference_number: p.reference_number.trim() || null
     }))
     const effectivePlatform = saleChannel === 'online' ? onlinePlatform : null
+    const effectiveMarketEventId = saleChannel === 'market' ? marketEventId : null
 
     const { data: saleId, error } = isManual
       ? await supabase.rpc('create_manual_sale', {
@@ -131,6 +165,7 @@ function Register(): React.JSX.Element {
           p_affects_inventory: manualAffectsInventory,
           p_manual_description: manualDescription.trim(),
           p_sale_channel: saleChannel,
+          p_market_event_id: effectiveMarketEventId,
           p_online_platform: effectivePlatform
         })
       : await supabase.rpc('create_sale', {
@@ -145,6 +180,7 @@ function Register(): React.JSX.Element {
           p_payments: paymentPayload,
           p_customer_email: customerEmail.trim() || null,
           p_sale_channel: saleChannel,
+          p_market_event_id: effectiveMarketEventId,
           p_online_platform: effectivePlatform
         })
 
@@ -154,6 +190,33 @@ function Register(): React.JSX.Element {
       setConfirmError(parseConfirmError(error.message))
       return
     }
+
+    setLastSaleReceipt({
+      items: isManual
+        ? [
+            {
+              name: manualDescription.trim(),
+              sku: '—',
+              quantity: parseInt(manualQuantity, 10) || 1,
+              unitPrice: parseFloat(manualPrice) || 0
+            }
+          ]
+        : cart.map((item) => ({
+            name: item.variation_name,
+            sku: item.sku,
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            discountType: item.discountType,
+            discountValue: item.discountValue
+          })),
+      payments: paymentPayload.map((p) => ({
+        method: p.method,
+        amount: p.amount,
+        reference: p.reference_number
+      })),
+      customerEmail: isManual ? null : customerEmail.trim() || null,
+      channel: saleChannel
+    })
 
     setLastSaleTotal(total)
     setLastSaleId(saleId as string)
@@ -169,6 +232,17 @@ function Register(): React.JSX.Element {
   function handleNewSale(): void {
     setLastSaleId(null)
     setLastSaleTotal(null)
+    setLastSaleReceipt(null)
+  }
+
+  async function handlePrintReceipt(): Promise<void> {
+    if (!lastSaleId || !lastSaleReceipt) return
+    await printReceipt({
+      saleId: lastSaleId,
+      total: lastSaleTotal ?? 0,
+      saleDate: new Date().toLocaleDateString('en-KE', { dateStyle: 'full' }),
+      ...lastSaleReceipt
+    })
   }
 
   if (lastSaleId) {
@@ -180,13 +254,22 @@ function Register(): React.JSX.Element {
           {lastSaleTotal !== null && (
             <p className="text-xl font-bold text-jokenia-dark">KES {formatKes(lastSaleTotal)}</p>
           )}
-          <button
-            type="button"
-            onClick={handleNewSale}
-            className="mt-3 w-full rounded-md bg-jokenia-gold py-2.5 text-sm font-semibold text-jokenia-dark hover:brightness-95"
-          >
-            New sale
-          </button>
+          <div className="mt-3 flex w-full gap-2">
+            <button
+              type="button"
+              onClick={() => void handlePrintReceipt()}
+              className="flex-1 rounded-md bg-jokenia-dark2 py-2.5 text-sm font-semibold text-jokenia-cream hover:brightness-110"
+            >
+              Print receipt
+            </button>
+            <button
+              type="button"
+              onClick={handleNewSale}
+              className="flex-1 rounded-md bg-jokenia-gold py-2.5 text-sm font-semibold text-jokenia-dark hover:brightness-95"
+            >
+              New sale
+            </button>
+          </div>
         </div>
       </aside>
     )
@@ -223,6 +306,7 @@ function Register(): React.JSX.Element {
               onClick={() => {
                 setSaleChannel(option.id)
                 if (option.id !== 'online') setOnlinePlatform(null)
+                if (option.id !== 'market') setMarketEventId(null)
               }}
               className={`flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors ${
                 saleChannel === option.id
@@ -257,6 +341,26 @@ function Register(): React.JSX.Element {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {saleChannel === 'market' && (
+        <div>
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-jokenia-tan">
+            Market event
+          </p>
+          <select
+            value={marketEventId ?? ''}
+            onChange={(event) => setMarketEventId(event.target.value || null)}
+            className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark focus:border-jokenia-gold focus:outline-none"
+          >
+            <option value="">Select an event…</option>
+            {(marketEvents ?? []).map((event) => (
+              <option key={event.id} value={event.id}>
+                {event.name} — {new Date(`${event.start_date}T00:00:00`).toLocaleDateString('en-KE')}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -403,7 +507,7 @@ function Register(): React.JSX.Element {
       <button
         type="button"
         onClick={() => void handleConfirm()}
-        disabled={!hasItems || isConfirming || !paymentValid}
+        disabled={!hasItems || isConfirming || !paymentValid || marketEventRequired}
         className="flex w-full items-center justify-center gap-2 rounded-md bg-jokenia-gold py-2.5 text-sm font-semibold text-jokenia-dark hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isConfirming && (
@@ -419,6 +523,9 @@ function Register(): React.JSX.Element {
         <p className="text-center text-xs text-jokenia-tan">
           {isManual ? 'Enter sale details to confirm' : 'Add items to confirm'}
         </p>
+      )}
+      {hasItems && marketEventRequired && (
+        <p className="text-center text-xs text-red-500">Select a market event to continue</p>
       )}
       {confirmError && <p className="text-center text-xs text-red-500">{confirmError}</p>}
 

@@ -72,6 +72,32 @@ function printLabel(payload: { html: string; widthMm: number; heightMm: number }
   })
 }
 
+// Same hidden-window print pattern as printLabel, but with no custom
+// pageSize — the operator picks their receipt printer and paper size in
+// the print dialog, since (unlike labels) receipt printers aren't a fixed
+// known size.
+function printReceipt(html: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const receiptWindow = new BrowserWindow({ show: false })
+
+    receiptWindow.webContents.once('did-finish-load', () => {
+      receiptWindow.webContents.print(
+        { silent: false, printBackground: true },
+        (success, errorType) => {
+          receiptWindow.destroy()
+          if (success) {
+            resolve()
+          } else {
+            reject(new Error(errorType))
+          }
+        }
+      )
+    })
+
+    receiptWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+  })
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -90,6 +116,7 @@ app.whenReady().then(() => {
     'print-label',
     (_event, payload: { html: string; widthMm: number; heightMm: number }) => printLabel(payload)
   )
+  ipcMain.handle('print-receipt', (_event, html: string) => printReceipt(html))
   ipcMain.handle('app-get-version', () => app.getVersion())
   ipcMain.handle('check-for-updates', () => autoUpdater.checkForUpdatesAndNotify())
   ipcMain.handle('preferences-get', (_event, key: string) => preferencesStore.get(key))

@@ -7,6 +7,7 @@ export type TabId =
   | 'staff'
   | 'consignees'
   | 'partners'
+  | 'markets'
   | 'services'
   | 'reconciliation'
   | 'expenses'
@@ -18,7 +19,7 @@ export type SaleTypeOption = 'retail' | 'manual'
 
 export type PaymentMethodOption = 'cash' | 'card' | 'mpesa'
 
-export type SaleChannel = 'in_shop' | 'online'
+export type SaleChannel = 'in_shop' | 'online' | 'market'
 
 export type OnlinePlatform = 'whatsapp' | 'instagram' | 'other'
 
@@ -46,4 +47,18 @@ export interface PaymentEntry {
 export interface TabDefinition {
   id: TabId
   label: string
+}
+
+export interface MarketEvent {
+  id: string
+  name: string
+  series_name: string | null
+  location: string | null
+  start_date: string
+  end_date: string
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  sale_count: number
+  total_revenue: number
 }

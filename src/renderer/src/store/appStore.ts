@@ -35,6 +35,7 @@ interface AppState {
   saleType: SaleTypeOption
   saleChannel: SaleChannel
   onlinePlatform: OnlinePlatform | null
+  marketEventId: string | null
   payments: PaymentEntry[]
   customerEmail: string
   isConfirming: boolean
@@ -49,6 +50,7 @@ interface AppState {
   setSaleType: (type: SaleTypeOption) => void
   setSaleChannel: (channel: SaleChannel) => void
   setOnlinePlatform: (platform: OnlinePlatform | null) => void
+  setMarketEventId: (id: string | null) => void
   addPayment: () => void
   removePayment: (id: string) => void
   updatePaymentMethod: (id: string, method: PaymentEntry['method']) => void
@@ -70,6 +72,7 @@ export const useAppStore = create<AppState>((set) => ({
   saleType: 'retail',
   saleChannel: 'in_shop',
   onlinePlatform: null,
+  marketEventId: null,
   payments: [blankPayment()],
   customerEmail: '',
   isConfirming: false,
@@ -132,6 +135,7 @@ export const useAppStore = create<AppState>((set) => ({
   setSaleType: (saleType) => set({ saleType }),
   setSaleChannel: (saleChannel) => set({ saleChannel }),
   setOnlinePlatform: (onlinePlatform) => set({ onlinePlatform }),
+  setMarketEventId: (marketEventId) => set({ marketEventId }),
 
   addPayment: () => set((state) => ({ payments: [...state.payments, blankPayment()] })),
 
@@ -170,6 +174,7 @@ export const useAppStore = create<AppState>((set) => ({
       isConfirming: false,
       saleChannel: 'in_shop',
       onlinePlatform: null,
+      marketEventId: null,
       payments: [blankPayment()]
     })
 }))
