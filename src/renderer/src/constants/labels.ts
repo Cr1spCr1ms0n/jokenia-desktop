@@ -1,4 +1,4 @@
 export const LABEL = {
-  widthMm: 50,
-  heightMm: 30
+  widthMm: 20,
+  heightMm: 20
 } as const

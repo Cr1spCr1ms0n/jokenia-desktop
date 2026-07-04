@@ -120,11 +120,7 @@ function InventoryPage(): React.JSX.Element {
     setPrintError(null)
     try {
       await printLabel({
-        barcode: item.barcode,
-        serialNumber: item.serial_number,
-        sku: item.sku,
-        size: buildSizeLabel(item),
-        price: item.price
+        serialNumber: item.serial_number
       })
     } catch {
       setPrintError('Could not print label — check the printer is connected and ready.')

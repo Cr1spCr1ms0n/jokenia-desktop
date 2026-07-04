@@ -15,7 +15,7 @@ function createWindow(): void {
     height: 800,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -97,28 +97,34 @@ app.whenReady().then(() => {
     preferencesStore.set(key, value)
   })
 
-  autoUpdater.on('update-available', () => {
-    // Optional: notify the user an update is downloading
-     console.log('An update is available and downloading in the background...')
-  })
-  autoUpdater.on('update-downloaded', () => {
-    // Notify user and offer to restart, or just let it apply on next launch
-    autoUpdater.autoInstallOnAppQuit = true
-
-     dialog.showMessageBox({
-      type: 'info',
-      title: 'Update Ready',
-      message: 'A new version of Jokenia Operations is ready! Would you like to restart and apply it now?',
-      buttons: ['Restart Now', 'Later'],
-      defaultId: 0,
-      cancelId: 1
-    }).then((result) => {
-      if (result.response === 0) {
-        // Shuts down the app immediately and starts the NSIS installer wizard
-        autoUpdater.quitAndInstall()
-      }
+  if (!is.dev) {
+    autoUpdater.on('update-available', () => {
+      console.log('An update is available and downloading in the background...')
     })
-  })
+
+    autoUpdater.on('update-downloaded', () => {
+      dialog
+        .showMessageBox({
+          type: 'info',
+          title: 'Update Ready — Jokenia Operations',
+          message: 'A new version has been downloaded.',
+          detail:
+            'Restart now to apply the update, or continue and it will be applied on next launch.',
+          buttons: ['Restart Now', 'Later'],
+          defaultId: 0,
+          cancelId: 1
+        })
+        .then(({ response }) => {
+          if (response === 0) {
+            autoUpdater.quitAndInstall(false, true)
+          }
+        })
+    })
+
+    autoUpdater.on('error', (err) => {
+      console.error('AutoUpdater error:', err)
+    })
+  }
 
   createWindow()
 
@@ -126,8 +132,6 @@ app.whenReady().then(() => {
   // Skipped in dev since there's no packaged app to update.
   if (!is.dev) {
     setTimeout(() => {
-       /* ADD THIS LINE RIGHT HERE TO BYPASS THE PRODUCTION INSTALLED GUARD */
-      autoUpdater.forceDevUpdateConfig = true
       autoUpdater.checkForUpdatesAndNotify()
     }, 3000)
   }
