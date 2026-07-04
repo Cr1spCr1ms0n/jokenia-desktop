@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import Store from 'electron-store'
 import icon from '../../resources/icon.png?asset'
+import { dialog } from 'electron' // Make sure dialog is imported at the top
 
 const preferencesStore = new Store()
 
@@ -98,10 +99,25 @@ app.whenReady().then(() => {
 
   autoUpdater.on('update-available', () => {
     // Optional: notify the user an update is downloading
+     console.log('An update is available and downloading in the background...')
   })
   autoUpdater.on('update-downloaded', () => {
     // Notify user and offer to restart, or just let it apply on next launch
     autoUpdater.autoInstallOnAppQuit = true
+
+     dialog.showMessageBox({
+      type: 'info',
+      title: 'Update Ready',
+      message: 'A new version of Jokenia Operations is ready! Would you like to restart and apply it now?',
+      buttons: ['Restart Now', 'Later'],
+      defaultId: 0,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        // Shuts down the app immediately and starts the NSIS installer wizard
+        autoUpdater.quitAndInstall()
+      }
+    })
   })
 
   createWindow()
