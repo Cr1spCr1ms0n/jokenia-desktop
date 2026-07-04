@@ -126,6 +126,8 @@ app.whenReady().then(() => {
   // Skipped in dev since there's no packaged app to update.
   if (!is.dev) {
     setTimeout(() => {
+       /* ADD THIS LINE RIGHT HERE TO BYPASS THE PRODUCTION INSTALLED GUARD */
+      autoUpdater.forceDevUpdateConfig = true
       autoUpdater.checkForUpdatesAndNotify()
     }, 3000)
   }
