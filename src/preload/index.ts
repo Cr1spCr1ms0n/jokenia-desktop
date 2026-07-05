@@ -14,6 +14,11 @@ const api = {
   print: (payload: { html: string; widthMm: number; heightMm: number }): Promise<void> =>
     ipcRenderer.invoke('print-label', payload),
   printReceipt: (html: string): Promise<void> => ipcRenderer.invoke('print-receipt', html),
+  exportPdf: (payload: {
+    html: string
+    defaultFileName: string
+  }): Promise<{ canceled: boolean; filePath?: string }> =>
+    ipcRenderer.invoke('export-pdf', payload),
   getVersion: (): Promise<string> => ipcRenderer.invoke('app-get-version'),
   checkForUpdates: (): Promise<void> => ipcRenderer.invoke('check-for-updates'),
   getPreference: (key: string): Promise<unknown> => ipcRenderer.invoke('preferences-get', key),

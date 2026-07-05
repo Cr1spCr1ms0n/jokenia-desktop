@@ -10,6 +10,10 @@ interface UpdaterStatus {
 interface JokeniaAPI {
   print: (payload: { html: string; widthMm: number; heightMm: number }) => Promise<void>
   printReceipt: (html: string) => Promise<void>
+  exportPdf: (payload: {
+    html: string
+    defaultFileName: string
+  }) => Promise<{ canceled: boolean; filePath?: string }>
   getVersion: () => Promise<string>
   checkForUpdates: () => Promise<void>
   getPreference: (key: string) => Promise<unknown>

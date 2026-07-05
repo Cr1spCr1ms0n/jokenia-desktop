@@ -16,9 +16,14 @@ async function fetchConsignees(): Promise<ConsigneeRow[]> {
 interface ConsigneeListProps {
   onSelect: (clientId: string) => void
   onRegister: () => void
+  onViewCareRegister: () => void
 }
 
-function ConsigneeList({ onSelect, onRegister }: ConsigneeListProps): React.JSX.Element {
+function ConsigneeList({
+  onSelect,
+  onRegister,
+  onViewCareRegister
+}: ConsigneeListProps): React.JSX.Element {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['consignees'],
     queryFn: fetchConsignees
@@ -28,7 +33,10 @@ function ConsigneeList({ onSelect, onRegister }: ConsigneeListProps): React.JSX.
 
   return (
     <div className="flex h-full flex-col p-4">
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex justify-between">
+        <Button variant="secondary" onClick={onViewCareRegister}>
+          Items in Jokenia&apos;s Care
+        </Button>
         <Button onClick={onRegister}>+ Register Consignee</Button>
       </div>
 

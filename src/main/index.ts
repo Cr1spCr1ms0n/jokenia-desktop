@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, Tray, Menu } from 'electron'
 import { join } from 'path'
+import { writeFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import Store from 'electron-store'
@@ -181,6 +182,41 @@ function printReceipt(html: string): Promise<void> {
   })
 }
 
+// Report export (Consignees) — renders the report HTML in a hidden window,
+// rasterizes it via Chromium's own printToPDF (promise-based, unlike the
+// callback-style .print() used by printLabel/printReceipt), then prompts a
+// save dialog and writes the buffer to disk. Opens the saved file afterward
+// so the operator sees the result immediately, same as a print preview would.
+function exportPdf(payload: {
+  html: string
+  defaultFileName: string
+}): Promise<{ canceled: boolean; filePath?: string }> {
+  return new Promise((resolve, reject) => {
+    const pdfWindow = new BrowserWindow({ show: false })
+    pdfWindow
+      .loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(payload.html)}`)
+      .then(() => pdfWindow.webContents.printToPDF({}))
+      .then(async (pdfBuffer) => {
+        pdfWindow.destroy()
+        const { canceled, filePath } = await dialog.showSaveDialog({
+          defaultPath: payload.defaultFileName,
+          filters: [{ name: 'PDF', extensions: ['pdf'] }]
+        })
+        if (canceled || !filePath) {
+          resolve({ canceled: true })
+          return
+        }
+        await writeFile(filePath, pdfBuffer)
+        shell.openPath(filePath)
+        resolve({ canceled: false, filePath })
+      })
+      .catch((err) => {
+        pdfWindow.destroy()
+        reject(err instanceof Error ? err : new Error(String(err)))
+      })
+  })
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -200,6 +236,9 @@ app.whenReady().then(() => {
     (_event, payload: { html: string; widthMm: number; heightMm: number }) => printLabel(payload)
   )
   ipcMain.handle('print-receipt', (_event, html: string) => printReceipt(html))
+  ipcMain.handle('export-pdf', (_event, payload: { html: string; defaultFileName: string }) =>
+    exportPdf(payload)
+  )
   ipcMain.handle('app-get-version', () => app.getVersion())
   ipcMain.handle('check-for-updates', () => autoUpdater.checkForUpdatesAndNotify())
   ipcMain.handle('preferences-get', (_event, key: string) => preferencesStore.get(key))

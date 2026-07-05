@@ -2,8 +2,13 @@ import { useState } from 'react'
 import ConsigneeList from '@/components/consignees/ConsigneeList'
 import ConsigneeDetail from '@/components/consignees/ConsigneeDetail'
 import RegisterConsigneeForm from '@/components/consignees/RegisterConsigneeForm'
+import CareRegister from '@/components/consignees/CareRegister'
 
-type View = { name: 'list' } | { name: 'detail'; clientId: string } | { name: 'register' }
+type View =
+  | { name: 'list' }
+  | { name: 'detail'; clientId: string }
+  | { name: 'register' }
+  | { name: 'care-register' }
 
 function ConsigneesPage(): React.JSX.Element {
   const [view, setView] = useState<View>({ name: 'list' })
@@ -21,10 +26,15 @@ function ConsigneesPage(): React.JSX.Element {
     )
   }
 
+  if (view.name === 'care-register') {
+    return <CareRegister onBack={() => setView({ name: 'list' })} />
+  }
+
   return (
     <ConsigneeList
       onSelect={(clientId) => setView({ name: 'detail', clientId })}
       onRegister={() => setView({ name: 'register' })}
+      onViewCareRegister={() => setView({ name: 'care-register' })}
     />
   )
 }

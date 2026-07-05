@@ -86,3 +86,63 @@ export interface ReceiveStockLine {
   quantity: string
   consignee_price: string
 }
+
+// Business-wide register row from get_all_consignee_lost_items — extends the
+// per-consignee ConsigneeCareItem shape with the consignee's own identity
+// fields, matching the admin app's BusinessLostItem exactly.
+export interface CareRegisterItem extends ConsigneeCareItem {
+  client_id: string
+  client_name: string
+  client_seq: number
+  recorded_at: string
+}
+
+// ─── Consignee liability report (get_consignee_report) ───────────────────────
+// Field names (including `lost_items`) match the RPC's actual response shape;
+// only display labels apply the JOKENIA_GLOBAL euphemism rule.
+
+export interface ConsigneeReportStockRow {
+  product_type: string
+  variation: string
+  sku: string | null
+  units_in_stock: number
+}
+
+export interface ConsigneeReportSaleRow {
+  sale_date: string
+  product_type: string
+  variation: string
+  serial_number: string
+  consignee_price: number
+  running_total: number
+}
+
+export interface ConsigneeReportSettlement {
+  settlement_date: string
+  total_amount: number
+  notes: string | null
+}
+
+export interface ConsigneeReportLostItem {
+  loss_date: string
+  product_type: string
+  variation: string
+  serial_number: string
+  consignee_price: number
+  settled: boolean
+}
+
+export interface ConsigneeReport {
+  client: {
+    name: string
+    contact_person: string | null
+    phone: string | null
+    email: string | null
+  }
+  report_period: { from: string; to: string }
+  stock: ConsigneeReportStockRow[]
+  sales: ConsigneeReportSaleRow[]
+  total_owed: number
+  settlements: ConsigneeReportSettlement[]
+  lost_items: ConsigneeReportLostItem[]
+}

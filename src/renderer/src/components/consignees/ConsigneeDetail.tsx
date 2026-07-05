@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import ReceiveStockModal from './ReceiveStockModal'
 import SettleModal from './SettleModal'
+import ConsigneeReportModal from './ConsigneeReportModal'
 import type {
   ConsigneeBalance,
   ConsigneeCareItem,
@@ -21,7 +22,11 @@ function formatKes(amount: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  })
 }
 
 async function fetchContact(clientId: string): Promise<ConsigneeContact> {
@@ -105,6 +110,7 @@ function ConsigneeDetail({ clientId, onBack }: ConsigneeDetailProps): React.JSX.
   const [careNotes, setCareNotes] = useState('')
   const [receiveOpen, setReceiveOpen] = useState(false)
   const [settleOpen, setSettleOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
 
   function invalidateAll(): void {
     queryClient.invalidateQueries({ queryKey: ['consignee-balance', clientId] })
@@ -205,10 +211,13 @@ function ConsigneeDetail({ clientId, onBack }: ConsigneeDetailProps): React.JSX.
               <p className="text-2xl font-bold text-amber-800">
                 {balance ? formatKes(balance.outstanding) : '—'}
               </p>
-              <p className="text-xs text-amber-700">Outstanding balance (unsettled sold + care items)</p>
+              <p className="text-xs text-amber-700">
+                Outstanding balance (unsettled sold + care items)
+              </p>
               {balance && (
                 <p className="mt-1 text-[11px] text-amber-700">
-                  Sold: {formatKes(balance.sold_total)} · In Jokenia's care: {formatKes(balance.lost_total)}
+                  Sold: {formatKes(balance.sold_total)} · In Jokenia's care:{' '}
+                  {formatKes(balance.lost_total)}
                 </p>
               )}
             </div>
@@ -219,6 +228,9 @@ function ConsigneeDetail({ clientId, onBack }: ConsigneeDetailProps): React.JSX.
               </Button>
               <Button onClick={() => setSettleOpen(true)} className="flex-1">
                 Settle
+              </Button>
+              <Button variant="secondary" onClick={() => setReportOpen(true)} className="flex-1">
+                Generate report
               </Button>
             </div>
 
@@ -330,9 +342,12 @@ function ConsigneeDetail({ clientId, onBack }: ConsigneeDetailProps): React.JSX.
                   {stockItems.map((item) => (
                     <div key={item.item_id} className="flex items-center justify-between px-3 py-2">
                       <div>
-                        <p className="text-sm font-medium text-jokenia-dark">{item.serial_number}</p>
+                        <p className="text-sm font-medium text-jokenia-dark">
+                          {item.serial_number}
+                        </p>
                         <p className="text-xs text-jokenia-tan">
-                          {item.product_type} — {item.variation_name} · Received {formatDate(item.received_date)}
+                          {item.product_type} — {item.variation_name} · Received{' '}
+                          {formatDate(item.received_date)}
                         </p>
                       </div>
                       <div className="text-right">
@@ -369,7 +384,9 @@ function ConsigneeDetail({ clientId, onBack }: ConsigneeDetailProps): React.JSX.
                   {unsettledSold.map((item) => (
                     <div key={item.item_id} className="flex items-center justify-between px-3 py-2">
                       <div>
-                        <p className="text-sm font-medium text-jokenia-dark">{item.serial_number}</p>
+                        <p className="text-sm font-medium text-jokenia-dark">
+                          {item.serial_number}
+                        </p>
                         <p className="text-xs text-jokenia-tan">
                           {item.variation_name} · {formatDate(item.sale_date)}
                         </p>
@@ -396,7 +413,9 @@ function ConsigneeDetail({ clientId, onBack }: ConsigneeDetailProps): React.JSX.
                   {settledSold.map((item) => (
                     <div key={item.item_id} className="flex items-center justify-between px-3 py-2">
                       <div>
-                        <p className="text-sm font-medium text-jokenia-dark">{item.serial_number}</p>
+                        <p className="text-sm font-medium text-jokenia-dark">
+                          {item.serial_number}
+                        </p>
                         <p className="text-xs text-jokenia-tan">
                           {item.variation_name} · {formatDate(item.sale_date)}
                         </p>
@@ -419,11 +438,15 @@ function ConsigneeDetail({ clientId, onBack }: ConsigneeDetailProps): React.JSX.
                   {careItems.map((item) => (
                     <div key={item.id} className="flex items-center justify-between px-3 py-2">
                       <div>
-                        <p className="text-sm font-medium text-jokenia-dark">{item.serial_number}</p>
+                        <p className="text-sm font-medium text-jokenia-dark">
+                          {item.serial_number}
+                        </p>
                         <p className="text-xs text-jokenia-tan">
                           {item.variation_name} · {formatDate(item.loss_date)}
                         </p>
-                        {item.notes && <p className="text-xs italic text-jokenia-tan">{item.notes}</p>}
+                        {item.notes && (
+                          <p className="text-xs italic text-jokenia-tan">{item.notes}</p>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-jokenia-dark">
@@ -521,6 +544,12 @@ function ConsigneeDetail({ clientId, onBack }: ConsigneeDetailProps): React.JSX.
           setSettleOpen(false)
           invalidateAll()
         }}
+      />
+
+      <ConsigneeReportModal
+        clientId={clientId}
+        isOpen={reportOpen}
+        onClose={() => setReportOpen(false)}
       />
 
       {!isOnline && (
