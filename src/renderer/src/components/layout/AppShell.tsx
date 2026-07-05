@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import TopBar from '@/components/layout/TopBar'
 import Register from '@/components/register/Register'
+import DashboardPage from '@/pages/DashboardPage'
 import CheckoutPage from '@/pages/CheckoutPage'
 import InventoryPage from '@/pages/InventoryPage'
 import BatchesPage from '@/pages/BatchesPage'
@@ -34,6 +35,7 @@ function AppShell({ role, userEmail }: AppShellProps): React.JSX.Element {
         <Register />
         <main className="flex-1 overflow-y-auto bg-jokenia-cream2">
           <Routes>
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/" element={<CheckoutPage />} />
             <Route path="/inventory" element={<InventoryPage role={role} />} />
             <Route path="/batches" element={<BatchesPage />} />

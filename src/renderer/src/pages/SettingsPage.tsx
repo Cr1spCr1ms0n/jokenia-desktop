@@ -6,10 +6,17 @@ import PrintingSection from '@/components/settings/PrintingSection'
 import DisplaySection from '@/components/settings/DisplaySection'
 import AccountSection from '@/components/settings/AccountSection'
 import DiagnosticsSection from '@/components/settings/DiagnosticsSection'
+import UsageSection from '@/components/settings/UsageSection'
 
-type SectionId = 'updates' | 'startup' | 'printing' | 'display' | 'account' | 'diagnostics'
+type SectionId =
+  'updates' | 'startup' | 'printing' | 'display' | 'account' | 'diagnostics' | 'usage'
 
-const SECTIONS: { id: SectionId; label: string; description: string }[] = [
+const ALL_SECTIONS: {
+  id: SectionId
+  label: string
+  description: string
+  superAdminOnly?: boolean
+}[] = [
   { id: 'updates', label: 'Updates', description: 'App version and OTA update checks.' },
   {
     id: 'startup',
@@ -23,7 +30,13 @@ const SECTIONS: { id: SectionId; label: string; description: string }[] = [
   },
   { id: 'display', label: 'Display', description: 'Adjust the app UI zoom level.' },
   { id: 'account', label: 'Account', description: 'Signed-in user and session controls.' },
-  { id: 'diagnostics', label: 'Diagnostics', description: 'Logs and version information.' }
+  { id: 'diagnostics', label: 'Diagnostics', description: 'Logs and version information.' },
+  {
+    id: 'usage',
+    label: 'Usage',
+    description: 'Monitor Supabase free-tier usage.',
+    superAdminOnly: true
+  }
 ]
 
 interface SettingsPageProps {
@@ -33,6 +46,9 @@ interface SettingsPageProps {
 
 function SettingsPage({ role, userEmail }: SettingsPageProps): React.JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams()
+  const SECTIONS = ALL_SECTIONS.filter(
+    (section) => !section.superAdminOnly || role === 'super_admin'
+  )
   const requested = searchParams.get('section') as SectionId | null
   const activeSection: SectionId = SECTIONS.some((section) => section.id === requested)
     ? (requested as SectionId)
@@ -75,6 +91,7 @@ function SettingsPage({ role, userEmail }: SettingsPageProps): React.JSX.Element
         {activeSection === 'display' && <DisplaySection />}
         {activeSection === 'account' && <AccountSection role={role} userEmail={userEmail} />}
         {activeSection === 'diagnostics' && <DiagnosticsSection />}
+        {activeSection === 'usage' && <UsageSection role={role} />}
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 export type SystemRole = 'staff' | 'admin' | 'super_admin'
 
 export type TabId =
+  | 'dashboard'
   | 'checkout'
   | 'inventory'
   | 'batches'
@@ -57,12 +58,7 @@ export interface PrinterInfo {
 // No 'idle' member: the Updates section represents "no check yet" as a null
 // UpdaterStatus rather than a wire status — main never sends 'idle'.
 export type UpdaterState =
-  | 'checking'
-  | 'available'
-  | 'not-available'
-  | 'downloading'
-  | 'downloaded'
-  | 'error'
+  'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
 
 export interface UpdaterStatus {
   status: UpdaterState

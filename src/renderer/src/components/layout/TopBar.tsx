@@ -4,6 +4,7 @@ import type { SystemRole, TabId } from '@/types'
 import TabNav from './TabNav'
 
 const TAB_PATHS: Record<TabId, string> = {
+  dashboard: '/dashboard',
   checkout: '/',
   inventory: '/inventory',
   batches: '/batches',
@@ -46,9 +47,7 @@ function TopBar({ role, userEmail }: TopBarProps): React.JSX.Element {
 
   return (
     <header className="flex h-11 shrink-0 items-center justify-between bg-jokenia-dark px-4">
-      <div className="font-heading text-lg font-bold tracking-wide text-jokenia-gold">
-        JOKENIA
-      </div>
+      <div className="font-heading text-lg font-bold tracking-wide text-jokenia-gold">JOKENIA</div>
 
       <TabNav activeTab={activeTab} onTabChange={handleTabChange} role={role} />
 

@@ -1,6 +1,7 @@
 import type { SystemRole, TabDefinition, TabId } from '@/types'
 
 const TABS: TabDefinition[] = [
+  { id: 'dashboard', label: 'Dashboard' },
   { id: 'checkout', label: 'Checkout' },
   { id: 'inventory', label: 'Inventory' },
   { id: 'batches', label: 'Batches' },
