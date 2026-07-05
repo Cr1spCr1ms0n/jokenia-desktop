@@ -49,6 +49,28 @@ export interface TabDefinition {
   label: string
 }
 
+export interface PrinterInfo {
+  name: string
+  displayName: string
+}
+
+// No 'idle' member: the Updates section represents "no check yet" as a null
+// UpdaterStatus rather than a wire status — main never sends 'idle'.
+export type UpdaterState =
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error'
+
+export interface UpdaterStatus {
+  status: UpdaterState
+  percent?: number
+  version?: string
+  message?: string
+}
+
 export interface MarketEvent {
   id: string
   name: string

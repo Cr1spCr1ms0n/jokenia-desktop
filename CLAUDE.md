@@ -233,3 +233,60 @@ See CLAUDE_OPS.md for the full ops bridge protocol. Reference values for this co
 | Ops project ID | `cbvbixizegkbjwgsqzuh` |
 | Jokenia project_id (filter) | `7f945045-e145-436f-a882-5de8129276a0` |
 | session_type | `Desktop App` |
+
+---
+
+## 15. Release & OTA Workflow
+
+### Pre-release checklist
+1. Working tree must be committed **and pushed to `origin/main`** before releasing — a release published from an uncommitted or unpushed tree leaves the repo unable to reproduce what's actually running on the shop PC.
+2. Bump the `version` field in `package.json`, commit, and push.
+
+### Publishing a release
+```powershell
+$env:GH_TOKEN = (gh auth token)
+npm run release
+```
+`release` runs `electron-vite build && electron-builder --publish always` (`package.json`). This builds the NSIS installer and publishes it, `latest.yml`, and the installer's `.blockmap` to GitHub Releases per `electron-builder.yml`'s `publish` block (`provider: github`, `owner: Cr1spCr1ms0n`, `repo: jokenia-desktop`).
+
+**electron-builder always creates the release as a DRAFT.** `electron-updater` cannot discover draft releases — after publishing, un-draft it on GitHub (e.g. `gh release edit v<version> --draft=false`), or OTA will silently never find the update.
+
+### Verify before considering a release live
+Confirm the published release's assets include all three:
+- `Jokenia-Operations-Setup-<version>.exe` — the NSIS installer (`nsis.artifactName`)
+- `latest.yml` — electron-updater's version manifest; without it, update checks fail silently
+- the installer's `.blockmap` — enables differential downloads
+
+### Delivery mechanics
+- `electron-updater` polls GitHub Releases on boot (`autoUpdater.checkForUpdatesAndNotify()` in `src/main/index.ts`, wrapped in `if (!is.dev)`) — **not commits**. Pushing to `main` alone does nothing until a release is published and un-drafted.
+- Once found, the update downloads silently in the background.
+- `autoInstallOnAppQuit = true` — the update installs automatically the next time the app quits, even if the operator never touches the update dialog.
+- The runtime `update-downloaded` dialog also offers an immediate "Restart now" option, calling `quitAndInstall(false, true)`.
+
+### Local OTA testing pattern
+- Test against the installed NSIS app only — never `win-unpacked` (`electron-builder --dir` output cannot self-update).
+- Install a build at a version **lower** than the one you're about to publish (a "dummy" old build), then publish the higher version and confirm the installed app picks it up on its next launch.
+
+### No channel separation
+There is a single publish target — any release published and un-drafted is immediately visible to every installed copy of the app, including the shop PC, on its next launch. There is no staging/beta channel. Coordinate release timing with Samuel if the shop PC is in active use.
+
+### History
+v1.0.0's initial OTA wiring had listener-scoping bugs (`update-available`/`update-downloaded` registered outside the `if (!is.dev)` guard) and no `autoUpdater.on('error', ...)` handler, so a broken update couldn't reliably self-heal past its own bug. Fixed in commit `158fcef` ("feat: markets, consignees, receipt printing, OTA dialog fix, item discounts, branded icon"). The shop PC required a one-time manual install of the fixed build to recover.
+
+---
+
+## 16. Settings Module & IPC Bridge Pattern
+
+The Settings tab (`pages/SettingsPage.tsx`) is a section switcher (Updates, Startup & Tray, Printing, Display, Account, Diagnostics — `components/settings/*.tsx`), selected via a `?section=` query param so different entry points can deep-link into a specific section. The gear icon opens the default (Updates) section; the TopBar avatar deep-links straight to `?section=account`.
+
+**Ownership rule:** all settings values live in the main process's `electron-store` instance (`preferencesStore` in `src/main/index.ts`), keyed `settings.<name>`. The renderer never touches `electron-store`, `app`, or `shell` directly — every read/write goes through a preload bridge method (`getPreference`/`setPreference` for plain key/value settings; dedicated methods for settings with a real side effect the main process must perform).
+
+**Two categories of setting:**
+- **Plain persisted values** (silent-print toggle, auto-print toggle, receipt copy count, default printer names, zoom level, start-minimized/minimize-to-tray/close-to-tray flags, last-update-checked timestamp) — renderer calls the existing generic `getPreference(key)` / `setPreference(key, value)` IPC, no new channel needed per setting.
+- **Values with a real OS-level side effect** — `getLoginAtStartup`/`setLoginAtStartup` (wraps `app.getLoginItemSettings()`/`setLoginItemSettings()`, source of truth is the OS registration, not just the store), `getPrinters` (`webContents.getPrintersAsync()`, live query, not stored), `openLogsFolder` (`shell.openPath(app.getPath('logs'))`). These get their own dedicated preload/IPC methods since a plain store round-trip wouldn't actually perform the action.
+
+**Push events (main → renderer):** the OTA "Check for updates" button needs live state (checking → downloading % → downloaded/error), not just a fire-and-forget invoke. Pattern: main registers `autoUpdater.on(...)` listeners that call `mainWindow.webContents.send('updater-event', payload)`; preload exposes `onUpdaterEvent(callback)` wrapping `ipcRenderer.on`/`removeListener` and returning an unsubscribe function; the renderer subscribes in a `useEffect`. These state-broadcasting listeners are registered **unconditionally** (not gated on `!is.dev`) so the Settings UI shows real state whenever a check is manually triggered — they were added as additional listeners alongside the pre-existing `!is.dev`-gated native dialog block (`update-downloaded` → "Restart Now" dialog, `quitAndInstall`), not folded into it, so that already-fixed dialog logic (commit 158fcef) is reused untouched rather than duplicated. Use this same push pattern for any future main→renderer live-state need.
+
+**Tray & window lifecycle:** `mainWindow` and `tray` are module-level (`let`) in `src/main/index.ts` so IPC handlers, the tray menu, and window event listeners can all reference the same instances. `close-to-tray` intercepts the window's `close` event (cancelable) and hides instead of quitting, gated by a module-level `isQuitting` flag set `true` only by the tray menu's "Quit" item and `app.on('before-quit')` — this is what lets a real quit still work. `minimize-to-tray` is different: the `'minimize'` event is **not** cancelable (no `preventDefault`), so it just hides the window immediately after the event fires rather than trying to stop the minimize.
+
+**Known environment limitation:** the manual "Check for updates" button cannot be exercised end-to-end in an unpacked/dev run — `autoUpdater.checkForUpdatesAndNotify()` has no `app-update.yml` to read outside a packaged build and its promise never settles, so the button sticks on "Checking…" with no error. This is the same underlying constraint that has kept OTA round-trip verification out of scope for every session since v1.0.0 (see §15 history) — it is not a defect in the Settings wiring, and `forceDevUpdateConfig` should not be reintroduced to work around it (see the Fix commit 4b904dfe note in CLAUDE_LOG.md for why that was removed). Live verification of this button requires a packaged install pointed at real GitHub Releases.

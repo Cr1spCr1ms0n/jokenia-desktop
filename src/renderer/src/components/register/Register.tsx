@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { selectCartTotal, useAppStore } from '@/store/appStore'
@@ -244,6 +244,17 @@ function Register(): React.JSX.Element {
       ...lastSaleReceipt
     })
   }
+
+  // Settings > Printing > "Auto-print receipt after sale". lastSaleReceipt is
+  // set synchronously alongside lastSaleId in handleConfirm, so by the time
+  // this effect runs the receipt snapshot is already available.
+  useEffect(() => {
+    if (!lastSaleId) return
+    window.electron.getPreference('settings.autoPrintReceipt').then((value) => {
+      if (value) void handlePrintReceipt()
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastSaleId])
 
   if (lastSaleId) {
     return (

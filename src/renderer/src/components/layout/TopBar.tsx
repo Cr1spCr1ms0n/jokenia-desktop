@@ -33,6 +33,15 @@ function TopBar({ role, userEmail }: TopBarProps): React.JSX.Element {
     navigate(TAB_PATHS[tab])
   }
 
+  // Both entry points open Settings, but the avatar deep-links straight to
+  // the Account section rather than duplicating the sign-out/profile UI —
+  // the previous placeholder page had no distinct account content for either
+  // to point at, so this is the differentiation the dispatch asked for.
+  function handleAvatarClick(): void {
+    setActiveTab('settings')
+    navigate('/settings?section=account')
+  }
+
   const initials = userEmail.split('@')[0].slice(0, 2).toUpperCase()
 
   return (
@@ -50,9 +59,9 @@ function TopBar({ role, userEmail }: TopBarProps): React.JSX.Element {
         />
         <button
           type="button"
-          onClick={() => handleTabChange('settings')}
-          title="Go to settings"
-          aria-label="Go to settings"
+          onClick={handleAvatarClick}
+          title="Account settings"
+          aria-label="Account settings"
           className="flex h-7 w-7 items-center justify-center rounded-full bg-jokenia-dark2 text-xs font-semibold text-jokenia-cream hover:bg-jokenia-tan"
         >
           {initials}

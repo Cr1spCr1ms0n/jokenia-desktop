@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
@@ -8,9 +8,29 @@ import { dialog } from 'electron' // Make sure dialog is imported at the top
 
 const preferencesStore = new Store()
 
+// Pushed to the renderer's Settings > Updates section so a manually-triggered
+// check has visible state (checking/downloading %/downloaded/error) instead
+// of only the silent background-check + native dialog this app already had.
+interface UpdaterStatus {
+  status: 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
+  percent?: number
+  version?: string
+  message?: string
+}
+
+let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
+let isQuitting = false
+
+function broadcastUpdaterEvent(payload: UpdaterStatus): void {
+  mainWindow?.webContents.send('updater-event', payload)
+}
+
 function createWindow(): void {
+  const startMinimized = preferencesStore.get('settings.startMinimized', false) as boolean
+
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     show: false,
@@ -23,7 +43,30 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    if (!startMinimized) {
+      mainWindow?.show()
+    }
+  })
+
+  // Settings > Startup & Tray: "minimize to tray". The 'minimize' event
+  // isn't cancelable (no preventDefault, unlike 'close') — so instead of
+  // stopping the minimize, this hides the window right after, which reads
+  // the same to the operator (window gone from the taskbar, tray icon remains).
+  mainWindow.on('minimize', () => {
+    const minimizeToTray = preferencesStore.get('settings.minimizeToTray', false) as boolean
+    if (minimizeToTray) {
+      mainWindow?.hide()
+    }
+  })
+
+  // Settings > Startup & Tray: "close to tray" — the window X hides the app;
+  // only the tray menu's "Quit" (which sets isQuitting first) really exits.
+  mainWindow.on('close', (event) => {
+    const closeToTray = preferencesStore.get('settings.closeToTray', false) as boolean
+    if (closeToTray && !isQuitting) {
+      event.preventDefault()
+      mainWindow?.hide()
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -40,18 +83,50 @@ function createWindow(): void {
   }
 }
 
+function createTray(): void {
+  tray = new Tray(icon)
+  tray.setToolTip('Jokenia Operations')
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      {
+        label: 'Open',
+        click: () => {
+          mainWindow?.show()
+          mainWindow?.focus()
+        }
+      },
+      { label: 'Check for updates', click: () => autoUpdater.checkForUpdatesAndNotify() },
+      { type: 'separator' },
+      {
+        label: 'Quit',
+        click: () => {
+          isQuitting = true
+          app.quit()
+        }
+      }
+    ])
+  )
+  tray.on('double-click', () => {
+    mainWindow?.show()
+    mainWindow?.focus()
+  })
+}
+
 // Creates a hidden window, loads the label HTML, prints it at the label's
 // physical size (converted mm -> microns, the unit Chromium's print API
 // expects), and tears the window down.
 function printLabel(payload: { html: string; widthMm: number; heightMm: number }): Promise<void> {
   return new Promise((resolve, reject) => {
     const labelWindow = new BrowserWindow({ show: false })
+    const silent = preferencesStore.get('settings.silentPrint', false) as boolean
+    const deviceName = preferencesStore.get('settings.defaultLabelPrinter', '') as string
 
     labelWindow.webContents.once('did-finish-load', () => {
       labelWindow.webContents.print(
         {
-          silent: false,
+          silent,
           printBackground: true,
+          ...(deviceName ? { deviceName } : {}),
           pageSize: {
             width: payload.widthMm * 1000,
             height: payload.heightMm * 1000
@@ -79,10 +154,18 @@ function printLabel(payload: { html: string; widthMm: number; heightMm: number }
 function printReceipt(html: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const receiptWindow = new BrowserWindow({ show: false })
+    const silent = preferencesStore.get('settings.silentPrint', false) as boolean
+    const deviceName = preferencesStore.get('settings.defaultReceiptPrinter', '') as string
+    const copies = preferencesStore.get('settings.receiptCopyCount', 1) as number
 
     receiptWindow.webContents.once('did-finish-load', () => {
       receiptWindow.webContents.print(
-        { silent: false, printBackground: true },
+        {
+          silent,
+          printBackground: true,
+          copies,
+          ...(deviceName ? { deviceName } : {})
+        },
         (success, errorType) => {
           receiptWindow.destroy()
           if (success) {
@@ -123,6 +206,45 @@ app.whenReady().then(() => {
   ipcMain.handle('preferences-set', (_event, key: string, value: unknown) => {
     preferencesStore.set(key, value)
   })
+  ipcMain.handle('get-printers', async () => {
+    if (!mainWindow) return []
+    const printers = await mainWindow.webContents.getPrintersAsync()
+    return printers.map((printer) => ({
+      name: printer.name,
+      displayName: printer.displayName
+    }))
+  })
+  ipcMain.handle('get-login-at-startup', () => app.getLoginItemSettings().openAtLogin)
+  ipcMain.handle('set-login-at-startup', (_event, value: boolean) => {
+    app.setLoginItemSettings({ openAtLogin: value })
+  })
+  ipcMain.handle('open-logs-folder', () => shell.openPath(app.getPath('logs')))
+
+  // State-broadcasting listeners for the Settings > Updates panel. These are
+  // additional listeners alongside the existing !is.dev dialog/error block
+  // below (electron-updater/Node's EventEmitter support multiple listeners
+  // per event) — added rather than folded into that block so the existing,
+  // already-fixed OTA dialog logic (dispatch 4b904dfe) is reused untouched,
+  // not duplicated.
+  autoUpdater.on('checking-for-update', () => {
+    preferencesStore.set('settings.lastUpdateCheckAt', new Date().toISOString())
+    broadcastUpdaterEvent({ status: 'checking' })
+  })
+  autoUpdater.on('update-available', (info) => {
+    broadcastUpdaterEvent({ status: 'available', version: info.version })
+  })
+  autoUpdater.on('update-not-available', () => {
+    broadcastUpdaterEvent({ status: 'not-available' })
+  })
+  autoUpdater.on('download-progress', (progress) => {
+    broadcastUpdaterEvent({ status: 'downloading', percent: Math.round(progress.percent) })
+  })
+  autoUpdater.on('update-downloaded', () => {
+    broadcastUpdaterEvent({ status: 'downloaded' })
+  })
+  autoUpdater.on('error', (err) => {
+    broadcastUpdaterEvent({ status: 'error', message: err.message })
+  })
 
   if (!is.dev) {
     autoUpdater.on('update-available', () => {
@@ -154,6 +276,7 @@ app.whenReady().then(() => {
   }
 
   createWindow()
+  createTray()
 
   // Avoid blocking startup — check for updates a few seconds after boot.
   // Skipped in dev since there's no packaged app to update.
@@ -177,4 +300,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// Distinguishes a real quit (tray "Quit", Cmd+Q, etc.) from the window's own
+// close button, which close-to-tray intercepts in the 'close' handler above.
+app.on('before-quit', () => {
+  isQuitting = true
 })

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import TopBar from '@/components/layout/TopBar'
 import Register from '@/components/register/Register'
@@ -20,6 +21,12 @@ interface AppShellProps {
 }
 
 function AppShell({ role, userEmail }: AppShellProps): React.JSX.Element {
+  useEffect(() => {
+    window.electron.getPreference('settings.zoomLevel').then((value) => {
+      window.electron.webFrame.setZoomFactor(typeof value === 'number' ? value : 1)
+    })
+  }, [])
+
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden">
       <TopBar role={role} userEmail={userEmail} />
@@ -37,7 +44,7 @@ function AppShell({ role, userEmail }: AppShellProps): React.JSX.Element {
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/reconciliation" element={<ReconciliationPage />} />
             {role === 'super_admin' && <Route path="/expenses" element={<ExpensesPage />} />}
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings" element={<SettingsPage role={role} userEmail={userEmail} />} />
           </Routes>
         </main>
       </div>
