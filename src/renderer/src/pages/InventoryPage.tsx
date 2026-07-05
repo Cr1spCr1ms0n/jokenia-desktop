@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { printLabel } from '@/utils/label'
 import Button from '@/components/ui/Button'
+import ProductTypesTab from '@/components/inventory/ProductTypesTab'
+import PricingTab from '@/components/inventory/PricingTab'
+import type { SystemRole } from '@/types'
 
 // get_all_stock_items() verified live: returns item_id, serial_number,
 // origin_type, origin_code, variation_id, variation_name, type_name,
@@ -29,7 +32,7 @@ function buildSizeLabel(item: StockItem): string {
   return ''
 }
 
-function InventoryPage(): React.JSX.Element {
+function StockTab(): React.JSX.Element {
   const [items, setItems] = useState<StockItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -204,6 +207,49 @@ function InventoryPage(): React.JSX.Element {
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+type InventoryTab = 'stock' | 'types' | 'pricing'
+
+interface InventoryPageProps {
+  role: SystemRole
+}
+
+function InventoryPage({ role }: InventoryPageProps): React.JSX.Element {
+  const [activeTab, setActiveTab] = useState<InventoryTab>('stock')
+  const isSuperAdmin = role === 'super_admin'
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex gap-1.5 border-b border-jokenia-tan/20 bg-jokenia-cream2 px-4 pt-3">
+        {(
+          [
+            { key: 'stock', label: 'Stock' },
+            { key: 'types', label: 'Product Types' },
+            { key: 'pricing', label: 'Pricing' }
+          ] as Array<{ key: InventoryTab; label: string }>
+        ).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={`rounded-t-md px-3 py-1.5 text-sm font-medium ${
+              activeTab === tab.key
+                ? 'bg-jokenia-cream text-jokenia-dark'
+                : 'text-jokenia-dark2 hover:text-jokenia-dark'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div className="min-h-0 flex-1">
+        {activeTab === 'stock' && <StockTab />}
+        {activeTab === 'types' && <ProductTypesTab />}
+        {activeTab === 'pricing' && <PricingTab isSuperAdmin={isSuperAdmin} />}
+      </div>
     </div>
   )
 }

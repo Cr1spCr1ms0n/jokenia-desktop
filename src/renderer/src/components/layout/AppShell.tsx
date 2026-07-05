@@ -35,7 +35,7 @@ function AppShell({ role, userEmail }: AppShellProps): React.JSX.Element {
         <main className="flex-1 overflow-y-auto bg-jokenia-cream2">
           <Routes>
             <Route path="/" element={<CheckoutPage />} />
-            <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/inventory" element={<InventoryPage role={role} />} />
             <Route path="/batches" element={<BatchesPage />} />
             <Route path="/staff" element={<StaffPage />} />
             <Route path="/consignees" element={<ConsigneesPage />} />
