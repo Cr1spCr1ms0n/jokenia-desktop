@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { statusBadgeClass } from '@/utils/statusBadge'
 import QueryState from '@/components/ui/QueryState'
+import Button from '@/components/ui/Button'
+import RecordProductionModal from './RecordProductionModal'
 import { BATCH_STATUS_LABELS, type BatchRow, type BatchStatus } from './types'
 
 const FILTERS: { id: BatchStatus | 'all'; label: string }[] = [
@@ -46,7 +48,9 @@ interface BatchListProps {
 }
 
 function BatchList({ onSelect }: BatchListProps): React.JSX.Element {
+  const queryClient = useQueryClient()
   const [filter, setFilter] = useState<BatchStatus | 'all'>('all')
+  const [recordOpen, setRecordOpen] = useState(false)
   const { data, isLoading, error, refetch } = useQuery({ queryKey: ['batches'], queryFn: fetchBatches })
 
   const filtered = useMemo(() => {
@@ -57,21 +61,24 @@ function BatchList({ onSelect }: BatchListProps): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col p-4">
-      <div className="mb-3 flex flex-wrap gap-1 rounded-md bg-white/50 p-1">
-        {FILTERS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setFilter(item.id)}
-            className={`rounded px-3 py-1.5 text-xs font-medium transition-colors ${
-              filter === item.id
-                ? 'bg-jokenia-gold text-jokenia-dark'
-                : 'text-jokenia-dark2 hover:bg-white'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1 rounded-md bg-white/50 p-1">
+          {FILTERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setFilter(item.id)}
+              className={`rounded px-3 py-1.5 text-xs font-medium transition-colors ${
+                filter === item.id
+                  ? 'bg-jokenia-gold text-jokenia-dark'
+                  : 'text-jokenia-dark2 hover:bg-white'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <Button onClick={() => setRecordOpen(true)}>+ Record production</Button>
       </div>
 
       <QueryState
@@ -122,6 +129,16 @@ function BatchList({ onSelect }: BatchListProps): React.JSX.Element {
           </table>
         </div>
       </QueryState>
+
+      <RecordProductionModal
+        isOpen={recordOpen}
+        onClose={() => setRecordOpen(false)}
+        onRecorded={(batchId) => {
+          setRecordOpen(false)
+          queryClient.invalidateQueries({ queryKey: ['batches'] })
+          onSelect(batchId)
+        }}
+      />
     </div>
   )
 }

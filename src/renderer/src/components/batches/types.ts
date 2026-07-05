@@ -1,4 +1,5 @@
-export type BatchStatus = 'pending_verification' | 'pending_product_approval' | 'approved' | 'rejected'
+export type BatchStatus =
+  'pending_verification' | 'pending_product_approval' | 'approved' | 'rejected'
 
 export const BATCH_STATUS_LABELS: Record<BatchStatus, string> = {
   pending_verification: 'Pending Verification',
@@ -64,7 +65,12 @@ export type ApproveSuggestionParams =
       p_external_barcode: string | null
     }
   | { p_variation_id: string }
-  | { p_style_id: string; p_colour: string | null; p_size: string | null; p_external_barcode: string | null }
+  | {
+      p_style_id: string
+      p_colour: string | null
+      p_size: string | null
+      p_external_barcode: string | null
+    }
   | {
       p_product_type_id: string
       p_style_name: string | null
@@ -77,4 +83,9 @@ export interface ApproveSuggestionResult {
   batch_id: string
   batch_status: BatchStatus
   remaining_suggestions: number
+}
+
+export interface ProductionLine {
+  variation: ProductVariationOption | null
+  quantity: string
 }
