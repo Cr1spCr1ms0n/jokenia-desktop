@@ -16,7 +16,8 @@ interface SearchResultRow {
   product_type: string
   variation_name: string
   sku: string
-  price: number
+  last_price: number
+  stock_count: number
 }
 
 type ScanStatus = 'idle' | 'loading' | 'success' | 'error'
@@ -34,52 +35,15 @@ const BORDER_CLASSES: Record<ScanStatus, string> = {
 
 const SEARCH_DEBOUNCE_MS = 300
 
-// Search results don't carry a real stock count (unlike a barcode scan,
-// which resolves through resolve_barcode's live count) — server-side
-// create_sale enforces stock, surfaced via the existing "Insufficient
-// stock" error path, so the cart's client-side +/- cap is left unset here.
-const UNCAPPED_STOCK = Number.MAX_SAFE_INTEGER
-
 async function searchVariations(query: string): Promise<SearchResultRow[]> {
-  const pattern = `%${query.trim()}%`
-  const { data, error } = await supabase
-    .from('product_variations')
-    .select('id, name, sku, price, product_types(name)')
-    .or(`name.ilike.${pattern},sku.ilike.${pattern}`)
-    .limit(20)
+  const { data, error } = await supabase.rpc('search_variations', {
+    p_query: query.trim(),
+    p_limit: 20
+  })
 
   if (error || !data) return []
 
-  const rows = data as unknown as Array<{
-    id: string
-    name: string
-    sku: string
-    price: number | null
-    product_types: { name: string } | null
-  }>
-
-  const variationIds = rows.map((row) => row.id)
-  const priceById = new Map<string, number>()
-
-  if (variationIds.length > 0) {
-    const { data: priceData, error: priceError } = await supabase.rpc('get_all_current_prices')
-    if (!priceError) {
-      const priceRows =
-        (priceData as { prices?: Array<{ variation_id: string; current_price: number | null }> })
-          ?.prices ?? []
-      for (const priceRow of priceRows) {
-        if (priceRow.current_price != null) priceById.set(priceRow.variation_id, priceRow.current_price)
-      }
-    }
-  }
-
-  return rows.map((row) => ({
-    variation_id: row.id,
-    product_type: row.product_types?.name ?? '—',
-    variation_name: row.name,
-    sku: row.sku,
-    price: priceById.get(row.id) ?? row.price ?? 0
-  }))
+  return data as SearchResultRow[]
 }
 
 function ScanInput({ isConfirming }: ScanInputProps): React.JSX.Element {
@@ -185,8 +149,8 @@ function ScanInput({ isConfirming }: ScanInputProps): React.JSX.Element {
       product_type: result.product_type,
       variation_name: result.variation_name,
       sku: result.sku,
-      unit_price: result.price,
-      stock_count: UNCAPPED_STOCK
+      unit_price: result.last_price,
+      stock_count: result.stock_count
     })
     setValue('')
     setResults([])
@@ -244,7 +208,8 @@ function ScanInput({ isConfirming }: ScanInputProps): React.JSX.Element {
                 {result.product_type} — {result.variation_name}
               </div>
               <div className="truncate text-[11px] text-jokenia-tan">
-                {result.sku} · KES {result.price.toLocaleString('en-KE')}
+                {result.sku} · KES {result.last_price.toLocaleString('en-KE')} · {result.stock_count} in
+                stock
               </div>
             </button>
           ))}
