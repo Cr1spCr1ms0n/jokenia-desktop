@@ -2,6 +2,24 @@
 
 ---
 
+## Run summary — 2026-07-06 (session 7), v1.0.4 released
+
+One dispatch claimed and completed this run:
+1. **1e6fae8d** (priority 7, release mechanics) — Committed the two pending fixes (register compression, ScanInput search RPC swap), bumped to v1.0.4, pushed, and published the GitHub release. Precondition check passed: working tree contained exactly the four expected files, version was 1.0.3.
+
+**Commits (pushed to `origin/main`):**
+- `3e29879` — `fix(register): cart list owns spare height, min-h-0 scroll fix, non-shrinking footer; CartItem min-height (small-screen compression)`
+- `3333bbb` — `feat(register): checkout search via search_variations RPC — matches product type names, in-stock only (migration 71)` (also carries the full CLAUDE_LOG.md diff — spanned sessions 4/5/6, none of which had been committed since the v1.0.3 bump; attached to this commit per the dispatch's own "commit CLAUDE_LOG.md with either commit" allowance)
+- `c7e5d18` — `chore: bump v1.0.4`
+
+**Release:** [v1.0.4](https://github.com/Cr1spCr1ms0n/jokenia-desktop/releases/tag/v1.0.4), published (not draft). Assets: `Jokenia-Operations-Setup-1.0.4.exe`, `Jokenia-Operations-Setup-1.0.4.exe.blockmap`, `latest.yml`.
+
+**Publish anomaly hit and fixed:** `electron-builder --publish always` created **two separate draft GitHub releases both tagged `v1.0.4`** (ids `349611760` and `349611761`, identical timestamps) — the exe + `latest.yml` landed on one, the blockmap alone landed on the other. This is a new failure mode not previously seen in this repo's release history (v1.0.0–v1.0.3 all published as a single draft per CLAUDE.md §15). Root cause not investigated further (likely a race between electron-builder's per-asset upload calls each independently deciding "release doesn't exist yet" — visible in the build log, "creating GitHub release" logged twice). Fixed by deleting the incomplete duplicate (`349611760`, blockmap-only) via `gh api -X DELETE` and uploading the missing blockmap onto the surviving release (`349611761`) via `gh release upload`, before un-drafting. **Flag for future releases:** after `npm run release`, always check `gh api repos/.../releases --jq '.[] | select(.tag_name=="vX.Y.Z")'` for duplicates before un-drafting — do not assume a single release was created.
+
+**Reminder carried over from session 6 — NOT resolved by this release:** `resolve_barcode` is still broken in production (ambiguous-column error, blocks the physical barcode scanner). v1.0.4 only fixes the *search* path in `ScanInput.tsx` — the scan-on-Enter path calling `resolve_barcode` is untouched and still fails. The shop PC will silently pick up v1.0.4 via `electron-updater` on next launch and its scanner will remain non-functional until a Backend session fixes the RPC. Told to the user directly, not just logged here.
+
+---
+
 ## Run summary — 2026-07-06 (session 6), CRITICAL live regression found in resolve_barcode
 
 One dispatch claimed and completed this run:
