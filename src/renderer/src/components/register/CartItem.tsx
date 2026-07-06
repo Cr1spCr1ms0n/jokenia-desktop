@@ -39,7 +39,7 @@ function CartItem({ item }: CartItemProps): React.JSX.Element {
   }
 
   return (
-    <div className="rounded-md bg-jokenia-cream2 px-2 py-1.5 text-sm">
+    <div className="min-h-[52px] shrink-0 rounded-md bg-jokenia-cream2 px-2 py-1.5 text-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-jokenia-dark">
@@ -53,11 +53,11 @@ function CartItem({ item }: CartItemProps): React.JSX.Element {
             type="button"
             onClick={() => decrementQuantity(item.variation_id)}
             aria-label={`Decrease quantity of ${item.variation_name}`}
-            className="flex h-5 w-5 items-center justify-center rounded bg-jokenia-gold text-xs font-semibold text-jokenia-dark hover:brightness-95"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-jokenia-gold text-xs font-semibold text-jokenia-dark hover:brightness-95"
           >
             −
           </button>
-          <span className="w-4 text-center text-xs font-medium text-jokenia-dark">
+          <span className="w-4 shrink-0 text-center text-xs font-medium text-jokenia-dark">
             {item.quantity}
           </span>
           <button
@@ -65,7 +65,7 @@ function CartItem({ item }: CartItemProps): React.JSX.Element {
             onClick={() => incrementQuantity(item.variation_id)}
             disabled={item.quantity >= item.stock_count}
             aria-label={`Increase quantity of ${item.variation_name}`}
-            className="flex h-5 w-5 items-center justify-center rounded bg-jokenia-gold text-xs font-semibold text-jokenia-dark hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-jokenia-gold text-xs font-semibold text-jokenia-dark hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
             +
           </button>

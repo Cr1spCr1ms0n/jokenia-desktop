@@ -287,63 +287,42 @@ function Register(): React.JSX.Element {
   }
 
   return (
-    <aside className="flex w-[278px] shrink-0 flex-col gap-3 overflow-y-auto bg-jokenia-cream p-3">
-      <div className="flex gap-1 rounded-md bg-white/50 p-1">
-        {SALE_TYPES.map((type) => (
-          <button
-            key={type.id}
-            type="button"
-            onClick={() => setSaleType(type.id)}
-            className={`flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors ${
-              saleType === type.id
-                ? 'bg-jokenia-gold text-jokenia-dark'
-                : 'text-jokenia-dark2 hover:bg-white'
-            }`}
-          >
-            {type.label}
-          </button>
-        ))}
-      </div>
-
-      <div>
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-jokenia-tan">
-          Channel
-        </p>
+    <aside className="flex h-full w-[278px] shrink-0 flex-col overflow-hidden bg-jokenia-cream">
+      {/* Fixed top: sale type / channel / platform / market / scan — always rigid, never scrolls */}
+      <div className="flex shrink-0 flex-col gap-3 p-3 pb-2">
         <div className="flex gap-1 rounded-md bg-white/50 p-1">
-          {CHANNEL_OPTIONS.map((option) => (
+          {SALE_TYPES.map((type) => (
             <button
-              key={option.id}
+              key={type.id}
               type="button"
-              onClick={() => {
-                setSaleChannel(option.id)
-                if (option.id !== 'online') setOnlinePlatform(null)
-                if (option.id !== 'market') setMarketEventId(null)
-              }}
+              onClick={() => setSaleType(type.id)}
               className={`flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors ${
-                saleChannel === option.id
-                  ? 'bg-jokenia-dark text-jokenia-cream'
+                saleType === type.id
+                  ? 'bg-jokenia-gold text-jokenia-dark'
                   : 'text-jokenia-dark2 hover:bg-white'
               }`}
             >
-              {option.label}
+              {type.label}
             </button>
           ))}
         </div>
-      </div>
 
-      {saleChannel === 'online' && (
         <div>
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-jokenia-tan">
-            Platform
+            Channel
           </p>
           <div className="flex gap-1 rounded-md bg-white/50 p-1">
-            {PLATFORM_OPTIONS.map((option) => (
+            {CHANNEL_OPTIONS.map((option) => (
               <button
                 key={option.id}
                 type="button"
-                onClick={() => setOnlinePlatform(onlinePlatform === option.id ? null : option.id)}
-                className={`flex-1 rounded px-1.5 py-1.5 text-[11px] font-medium transition-colors ${
-                  onlinePlatform === option.id
+                onClick={() => {
+                  setSaleChannel(option.id)
+                  if (option.id !== 'online') setOnlinePlatform(null)
+                  if (option.id !== 'market') setMarketEventId(null)
+                }}
+                className={`flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+                  saleChannel === option.id
                     ? 'bg-jokenia-dark text-jokenia-cream'
                     : 'text-jokenia-dark2 hover:bg-white'
                 }`}
@@ -353,202 +332,229 @@ function Register(): React.JSX.Element {
             ))}
           </div>
         </div>
-      )}
 
-      {saleChannel === 'market' && (
-        <div>
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-jokenia-tan">
-            Market event
-          </p>
-          <select
-            value={marketEventId ?? ''}
-            onChange={(event) => setMarketEventId(event.target.value || null)}
-            className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark focus:border-jokenia-gold focus:outline-none"
-          >
-            <option value="">Select an event…</option>
-            {(marketEvents ?? []).map((event) => (
-              <option key={event.id} value={event.id}>
-                {event.name} — {new Date(`${event.start_date}T00:00:00`).toLocaleDateString('en-KE')}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {isManual ? (
-        <div className="space-y-2">
-          <input
-            type="text"
-            value={manualDescription}
-            onChange={(event) => setManualDescription(event.target.value)}
-            placeholder="Description"
-            className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
-          />
-          <input
-            type="number"
-            value={manualPrice}
-            onChange={(event) => setManualPrice(event.target.value)}
-            placeholder="Unit price (KES)"
-            className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
-          />
-          <input
-            type="number"
-            value={manualQuantity}
-            onChange={(event) => setManualQuantity(event.target.value)}
-            placeholder="Quantity"
-            min={1}
-            className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
-          />
-          <label className="flex items-center justify-between rounded-md border border-jokenia-tan/20 bg-white px-3 py-2 text-xs text-jokenia-dark2">
-            <span>Deduct from stock</span>
-            <input
-              type="checkbox"
-              checked={manualAffectsInventory}
-              onChange={(event) => setManualAffectsInventory(event.target.checked)}
-            />
-          </label>
-        </div>
-      ) : (
-        <>
-          <ScanInput isConfirming={isConfirming} />
-
-          <div className="flex-1 space-y-1.5 overflow-y-auto">
-            {cart.length === 0 ? (
-              <p className="pt-6 text-center text-xs text-jokenia-tan">
-                Scan or search to add items
-              </p>
-            ) : (
-              cart.map((item) => <CartItem key={item.variation_id} item={item} />)
-            )}
-          </div>
-        </>
-      )}
-
-      {hasItems && (
-        <div className="flex items-center justify-between text-xs text-jokenia-dark2">
-          <span>{isManual ? 'Manual sale' : `${cart.length} item${cart.length === 1 ? '' : 's'}`}</span>
-          <span className="font-medium text-jokenia-dark">KES {formatKes(total)}</span>
-        </div>
-      )}
-
-      <div className="space-y-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-jokenia-tan">Payment</p>
-        {payments.map((entry) => (
-          <div key={entry.id} className="space-y-1 rounded-md border border-jokenia-tan/20 bg-white/60 p-2">
-            <div className="flex gap-1">
-              {PAYMENT_METHODS.map((method) => (
+        {saleChannel === 'online' && (
+          <div>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-jokenia-tan">
+              Platform
+            </p>
+            <div className="flex gap-1 rounded-md bg-white/50 p-1">
+              {PLATFORM_OPTIONS.map((option) => (
                 <button
-                  key={method.id}
+                  key={option.id}
                   type="button"
-                  onClick={() => updatePaymentMethod(entry.id, method.id)}
-                  className={`flex-1 rounded px-1.5 py-1 text-[11px] font-medium transition-colors ${
-                    entry.method === method.id
+                  onClick={() => setOnlinePlatform(onlinePlatform === option.id ? null : option.id)}
+                  className={`flex-1 rounded px-1.5 py-1.5 text-[11px] font-medium transition-colors ${
+                    onlinePlatform === option.id
                       ? 'bg-jokenia-dark text-jokenia-cream'
-                      : 'border border-jokenia-dark/30 bg-transparent text-jokenia-dark'
+                      : 'text-jokenia-dark2 hover:bg-white'
                   }`}
                 >
-                  {method.label}
+                  {option.label}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-1">
+          </div>
+        )}
+
+        {saleChannel === 'market' && (
+          <div>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-jokenia-tan">
+              Market event
+            </p>
+            <select
+              value={marketEventId ?? ''}
+              onChange={(event) => setMarketEventId(event.target.value || null)}
+              className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark focus:border-jokenia-gold focus:outline-none"
+            >
+              <option value="">Select an event…</option>
+              {(marketEvents ?? []).map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.name} — {new Date(`${event.start_date}T00:00:00`).toLocaleDateString('en-KE')}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {!isManual && <ScanInput isConfirming={isConfirming} />}
+      </div>
+
+      {/* Flexible middle: manual fields or cart list — owns all spare vertical space, scrolls internally */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-3">
+        {isManual ? (
+          <div className="space-y-2 pb-1">
+            <input
+              type="text"
+              value={manualDescription}
+              onChange={(event) => setManualDescription(event.target.value)}
+              placeholder="Description"
+              className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
+            />
+            <input
+              type="number"
+              value={manualPrice}
+              onChange={(event) => setManualPrice(event.target.value)}
+              placeholder="Unit price (KES)"
+              className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
+            />
+            <input
+              type="number"
+              value={manualQuantity}
+              onChange={(event) => setManualQuantity(event.target.value)}
+              placeholder="Quantity"
+              min={1}
+              className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
+            />
+            <label className="flex items-center justify-between rounded-md border border-jokenia-tan/20 bg-white px-3 py-2 text-xs text-jokenia-dark2">
+              <span>Deduct from stock</span>
               <input
-                type="number"
-                value={entry.amount}
-                onChange={(event) => updatePaymentAmount(entry.id, event.target.value)}
-                placeholder="Amount"
-                className="w-full rounded-md border border-jokenia-tan/40 bg-white px-2 py-1.5 text-xs text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
+                type="checkbox"
+                checked={manualAffectsInventory}
+                onChange={(event) => setManualAffectsInventory(event.target.checked)}
               />
-              {payments.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removePayment(entry.id)}
-                  aria-label="Remove payment"
-                  className="shrink-0 text-jokenia-tan hover:text-red-600"
-                >
-                  ✕
-                </button>
+            </label>
+          </div>
+        ) : cart.length === 0 ? (
+          <p className="pt-6 text-center text-xs text-jokenia-tan">Scan or search to add items</p>
+        ) : (
+          <div className="flex flex-col gap-1.5 pb-1">
+            {cart.map((item) => (
+              <CartItem key={item.variation_id} item={item} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Fixed footer: payment / total / confirm — non-shrinking, pinned to the bottom, scrolls
+          internally as a last resort if a very small screen can't fit it even with the cart at 0 */}
+      <div className="flex max-h-[55%] shrink-0 flex-col gap-3 overflow-y-auto p-3 pt-2">
+        {hasItems && (
+          <div className="flex items-center justify-between text-xs text-jokenia-dark2">
+            <span>{isManual ? 'Manual sale' : `${cart.length} item${cart.length === 1 ? '' : 's'}`}</span>
+            <span className="font-medium text-jokenia-dark">KES {formatKes(total)}</span>
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-jokenia-tan">Payment</p>
+          {payments.map((entry) => (
+            <div key={entry.id} className="space-y-1 rounded-md border border-jokenia-tan/20 bg-white/60 p-2">
+              <div className="flex gap-1">
+                {PAYMENT_METHODS.map((method) => (
+                  <button
+                    key={method.id}
+                    type="button"
+                    onClick={() => updatePaymentMethod(entry.id, method.id)}
+                    className={`flex-1 rounded px-1.5 py-1 text-[11px] font-medium transition-colors ${
+                      entry.method === method.id
+                        ? 'bg-jokenia-dark text-jokenia-cream'
+                        : 'border border-jokenia-dark/30 bg-transparent text-jokenia-dark'
+                    }`}
+                  >
+                    {method.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  value={entry.amount}
+                  onChange={(event) => updatePaymentAmount(entry.id, event.target.value)}
+                  placeholder="Amount"
+                  className="w-full rounded-md border border-jokenia-tan/40 bg-white px-2 py-1.5 text-xs text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
+                />
+                {payments.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removePayment(entry.id)}
+                    aria-label="Remove payment"
+                    className="shrink-0 text-jokenia-tan hover:text-red-600"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {(entry.method === 'mpesa' || entry.method === 'card') && (
+                <input
+                  type="text"
+                  value={entry.reference_number}
+                  onChange={(event) => updatePaymentReference(entry.id, event.target.value)}
+                  placeholder={entry.method === 'mpesa' ? 'M-Pesa code' : 'Card approval code'}
+                  className="w-full rounded-md border border-jokenia-tan/40 bg-white px-2 py-1.5 text-xs text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
+                />
               )}
             </div>
-            {(entry.method === 'mpesa' || entry.method === 'card') && (
-              <input
-                type="text"
-                value={entry.reference_number}
-                onChange={(event) => updatePaymentReference(entry.id, event.target.value)}
-                placeholder={entry.method === 'mpesa' ? 'M-Pesa code' : 'Card approval code'}
-                className="w-full rounded-md border border-jokenia-tan/40 bg-white px-2 py-1.5 text-xs text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
-              />
-            )}
+          ))}
+
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={addPayment}
+              className="rounded-md border border-jokenia-gold px-2 py-1 text-[11px] font-medium text-jokenia-dark2 hover:bg-white"
+            >
+              + Add payment
+            </button>
+            <span
+              className={`text-xs font-semibold ${
+                !paymentValid && hasItems ? 'text-red-500' : 'text-jokenia-dark2'
+              }`}
+            >
+              KES {formatKes(paymentsTotal)} / {formatKes(total)}
+            </span>
           </div>
-        ))}
-
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={addPayment}
-            className="rounded-md border border-jokenia-gold px-2 py-1 text-[11px] font-medium text-jokenia-dark2 hover:bg-white"
-          >
-            + Add payment
-          </button>
-          <span
-            className={`text-xs font-semibold ${
-              !paymentValid && hasItems ? 'text-red-500' : 'text-jokenia-dark2'
-            }`}
-          >
-            KES {formatKes(paymentsTotal)} / {formatKes(total)}
-          </span>
         </div>
-      </div>
 
-      {!isManual && (
-        <input
-          type="email"
-          value={customerEmail}
-          onChange={(event) => setCustomerEmail(event.target.value)}
-          placeholder="Receipt email (optional)"
-          className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
-        />
-      )}
-
-      <div className="flex items-baseline justify-between font-heading">
-        <span className="text-sm text-jokenia-dark2">Total</span>
-        <span className="text-2xl font-bold text-jokenia-dark">KES {formatKes(total)}</span>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => void handleConfirm()}
-        disabled={!hasItems || isConfirming || !paymentValid || marketEventRequired}
-        className="flex w-full items-center justify-center gap-2 rounded-md bg-jokenia-gold py-2.5 text-sm font-semibold text-jokenia-dark hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isConfirming && (
-          <span
-            className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-jokenia-dark/30 border-t-jokenia-dark"
-            aria-hidden="true"
+        {!isManual && (
+          <input
+            type="email"
+            value={customerEmail}
+            onChange={(event) => setCustomerEmail(event.target.value)}
+            placeholder="Receipt email (optional)"
+            className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
           />
         )}
-        {isConfirming ? 'Processing…' : `Confirm sale — KES ${formatKes(total)}`}
-      </button>
 
-      {!hasItems && (
-        <p className="text-center text-xs text-jokenia-tan">
-          {isManual ? 'Enter sale details to confirm' : 'Add items to confirm'}
-        </p>
-      )}
-      {hasItems && marketEventRequired && (
-        <p className="text-center text-xs text-red-500">Select a market event to continue</p>
-      )}
-      {confirmError && <p className="text-center text-xs text-red-500">{confirmError}</p>}
+        <div className="flex items-baseline justify-between font-heading">
+          <span className="text-sm text-jokenia-dark2">Total</span>
+          <span className="text-2xl font-bold text-jokenia-dark">KES {formatKes(total)}</span>
+        </div>
 
-      {hasItems && (
         <button
           type="button"
-          onClick={handleVoid}
-          className="text-center text-xs text-jokenia-tan hover:text-red-600"
+          onClick={() => void handleConfirm()}
+          disabled={!hasItems || isConfirming || !paymentValid || marketEventRequired}
+          className="flex w-full items-center justify-center gap-2 rounded-md bg-jokenia-gold py-2.5 text-sm font-semibold text-jokenia-dark hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Void cart
+          {isConfirming && (
+            <span
+              className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-jokenia-dark/30 border-t-jokenia-dark"
+              aria-hidden="true"
+            />
+          )}
+          {isConfirming ? 'Processing…' : `Confirm sale — KES ${formatKes(total)}`}
         </button>
-      )}
+
+        {!hasItems && (
+          <p className="text-center text-xs text-jokenia-tan">
+            {isManual ? 'Enter sale details to confirm' : 'Add items to confirm'}
+          </p>
+        )}
+        {hasItems && marketEventRequired && (
+          <p className="text-center text-xs text-red-500">Select a market event to continue</p>
+        )}
+        {confirmError && <p className="text-center text-xs text-red-500">{confirmError}</p>}
+
+        {hasItems && (
+          <button
+            type="button"
+            onClick={handleVoid}
+            className="text-center text-xs text-jokenia-tan hover:text-red-600"
+          >
+            Void cart
+          </button>
+        )}
+      </div>
     </aside>
   )
 }
