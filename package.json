@@ -1,6 +1,6 @@
 {
   "name": "jokenia-operations-desktop",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Jokenia Operations Desktop — Electron admin/POS app for Jokenia Designs",
   "main": "./out/main/index.js",
   "author": "Jokenia Designs",
