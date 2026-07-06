@@ -249,7 +249,13 @@ npm run release
 ```
 `release` runs `electron-vite build && electron-builder --publish always` (`package.json`). This builds the NSIS installer and publishes it, `latest.yml`, and the installer's `.blockmap` to GitHub Releases per `electron-builder.yml`'s `publish` block (`provider: github`, `owner: Cr1spCr1ms0n`, `repo: jokenia-desktop`).
 
-**electron-builder always creates the release as a DRAFT.** `electron-updater` cannot discover draft releases — after publishing, un-draft it on GitHub (e.g. `gh release edit v<version> --draft=false`), or OTA will silently never find the update.
+**Duplicate-draft check (mandatory — electron-builder upstream issue [#6676](https://github.com/electron-userland/electron-builder/issues/6676)):** a single `npm run release` can non-deterministically split assets across **two** draft releases sharing the identical tag — a GitHub API eventual-consistency race in electron-builder's per-artifact "does this release already exist" check, not a bug in this repo's config (`electron-builder.yml` is not the cause and should not be changed to work around it). Already hit twice in this repo's own history (v1.0.3, v1.0.4 — each time the installer `.exe`/`latest.yml` landed on one release and the `.blockmap` landed on a second, orphaned one). Immediately after `npm run release`, before un-drafting, run:
+```powershell
+gh api repos/Cr1spCr1ms0n/jokenia-desktop/releases --jq '.[] | select(.tag_name=="v<version>")'
+```
+Exactly one release object must return. If two: identify the complete one (or consolidate — download the missing asset(s) from the incomplete draft and re-upload them onto the survivor with `gh release upload v<version> <file>`), delete the incomplete duplicate (`gh release delete` targets by tag and is ambiguous when two releases share one — use `gh api -X DELETE repos/Cr1spCr1ms0n/jokenia-desktop/releases/<id>` with the specific numeric id instead), then re-run the check above until it returns exactly one release. `latest.yml`, the installer `.exe`, and the `.blockmap` must all sit on the single surviving release before proceeding.
+
+**electron-builder always creates the release as a DRAFT.** `electron-updater` cannot discover draft releases — after the duplicate-draft check above confirms a single, complete release, un-draft it on GitHub (e.g. `gh release edit v<version> --draft=false`), or OTA will silently never find the update.
 
 ### Verify before considering a release live
 Confirm the published release's assets include all three:
