@@ -1,5 +1,7 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
+
+const LAST_EMAIL_KEY = 'login.lastEmail'
 
 function parseAuthError(message: string): string {
   const m = message.toLowerCase()
@@ -24,6 +26,19 @@ function LoginPage(): React.JSX.Element {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const passwordInputRef = useRef<HTMLInputElement>(null)
+
+  // Convenience only, never a credential — password is required every
+  // launch by design (shared shop-PC register, persistSession: false in
+  // lib/supabase.ts). Prefilling the last-used email just saves retyping it.
+  useEffect(() => {
+    window.electron.getPreference(LAST_EMAIL_KEY).then((value) => {
+      if (typeof value === 'string' && value) {
+        setEmail(value)
+        passwordInputRef.current?.focus()
+      }
+    })
+  }, [])
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault()
@@ -61,6 +76,7 @@ function LoginPage(): React.JSX.Element {
       return
     }
 
+    void window.electron.setPreference(LAST_EMAIL_KEY, email)
     // Success — App.tsx's onAuthStateChange listener takes over from here.
   }
 
@@ -96,6 +112,7 @@ function LoginPage(): React.JSX.Element {
         <div className="relative mb-4">
           <input
             id="password"
+            ref={passwordInputRef}
             type={showPassword ? 'text' : 'password'}
             required
             value={password}
