@@ -32,13 +32,6 @@ function AccountSection({ role, userEmail }: AccountSectionProps): React.JSX.Ele
       <Button variant="secondary" onClick={() => void handleSignOut()}>
         Sign out
       </Button>
-
-      <div className="pt-2">
-        <h3 className="mb-1 text-sm font-medium text-jokenia-dark">Admin management</h3>
-        <p className="text-xs text-jokenia-tan">
-          Admin registration and deactivation — coming in a future update.
-        </p>
-      </div>
     </div>
   )
 }

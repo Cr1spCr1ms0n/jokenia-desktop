@@ -7,9 +7,17 @@ import DisplaySection from '@/components/settings/DisplaySection'
 import AccountSection from '@/components/settings/AccountSection'
 import DiagnosticsSection from '@/components/settings/DiagnosticsSection'
 import UsageSection from '@/components/settings/UsageSection'
+import AdminAccountsSection from '@/components/settings/AdminAccountsSection'
 
 type SectionId =
-  'updates' | 'startup' | 'printing' | 'display' | 'account' | 'diagnostics' | 'usage'
+  | 'updates'
+  | 'startup'
+  | 'printing'
+  | 'display'
+  | 'account'
+  | 'admin'
+  | 'diagnostics'
+  | 'usage'
 
 const ALL_SECTIONS: {
   id: SectionId
@@ -30,6 +38,12 @@ const ALL_SECTIONS: {
   },
   { id: 'display', label: 'Display', description: 'Adjust the app UI zoom level.' },
   { id: 'account', label: 'Account', description: 'Signed-in user and session controls.' },
+  {
+    id: 'admin',
+    label: 'Admin Accounts',
+    description: 'Create, deactivate, and reactivate admin accounts.',
+    superAdminOnly: true
+  },
   { id: 'diagnostics', label: 'Diagnostics', description: 'Logs and version information.' },
   {
     id: 'usage',
@@ -90,6 +104,7 @@ function SettingsPage({ role, userEmail }: SettingsPageProps): React.JSX.Element
         {activeSection === 'printing' && <PrintingSection />}
         {activeSection === 'display' && <DisplaySection />}
         {activeSection === 'account' && <AccountSection role={role} userEmail={userEmail} />}
+        {activeSection === 'admin' && <AdminAccountsSection />}
         {activeSection === 'diagnostics' && <DiagnosticsSection />}
         {activeSection === 'usage' && <UsageSection role={role} />}
       </div>
