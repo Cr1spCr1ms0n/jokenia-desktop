@@ -2,14 +2,14 @@ import bwipjs from 'bwip-js/browser'
 import { LABEL } from '@/constants/labels'
 
 export interface LabelData {
-  serialNumber: string // items.serial_number — printed as the barcode value AND as text below
+  barcode: string // product_variations.barcode — printed as the Code 128 barcode value AND as text below
 }
 
 export function generateLabelHtml(data: LabelData): string {
   const canvas = document.createElement('canvas')
   bwipjs.toCanvas(canvas, {
     bcid: 'code128',
-    text: data.serialNumber,
+    text: data.barcode,
     scale: 2,
     height: 12,
     includetext: false
@@ -24,7 +24,7 @@ export function generateLabelHtml(data: LabelData): string {
     span { font-family: monospace; font-size: 5px; text-align: center; letter-spacing: 0.2px; }
   </style></head><body>
     <img src="${barcodeDataUrl}" alt="barcode" />
-    <span>${data.serialNumber}</span>
+    <span>${data.barcode}</span>
   </body></html>`
 }
 

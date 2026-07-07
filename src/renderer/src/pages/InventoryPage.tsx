@@ -39,6 +39,12 @@ function StockTab(): React.JSX.Element {
   const [search, setSearch] = useState('')
   const [printingId, setPrintingId] = useState<string | null>(null)
   const [printError, setPrintError] = useState<string | null>(null)
+  const [printQuantities, setPrintQuantities] = useState<Record<string, string>>({})
+
+  function getPrintQuantity(itemId: string): number {
+    const parsed = parseInt(printQuantities[itemId] ?? '1', 10)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+  }
 
   async function loadItems(): Promise<void> {
     setIsLoading(true)
@@ -118,13 +124,21 @@ function StockTab(): React.JSX.Element {
     )
   }, [items, search])
 
-  async function handlePrint(item: StockItem): Promise<void> {
+  // Labels are variation-level, not item-level — every item of this
+  // variation gets an identical label, so quantity just repeats the same
+  // barcode. No native multi-copy IPC param exists yet (unlike print-receipt's
+  // `copies`), so this prints N separate jobs in sequence.
+  async function handlePrint(item: StockItem, quantity: number): Promise<void> {
+    if (!item.barcode) {
+      setPrintError('This variation has no barcode assigned — cannot print a label.')
+      return
+    }
     setPrintingId(item.item_id)
     setPrintError(null)
     try {
-      await printLabel({
-        serialNumber: item.serial_number
-      })
+      for (let i = 0; i < quantity; i++) {
+        await printLabel({ barcode: item.barcode })
+      }
     } catch {
       setPrintError('Could not print label — check the printer is connected and ready.')
     } finally {
@@ -193,13 +207,25 @@ function StockTab(): React.JSX.Element {
                     KES {item.price.toLocaleString('en-KE', { minimumFractionDigits: 0 })}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <Button
-                      variant="secondary"
-                      onClick={() => handlePrint(item)}
-                      disabled={printingId === item.item_id}
-                    >
-                      {printingId === item.item_id ? 'Printing…' : 'Print label'}
-                    </Button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <input
+                        type="number"
+                        min={1}
+                        value={printQuantities[item.item_id] ?? '1'}
+                        onChange={(event) =>
+                          setPrintQuantities((prev) => ({ ...prev, [item.item_id]: event.target.value }))
+                        }
+                        aria-label="Label quantity"
+                        className="w-12 rounded-md border border-jokenia-tan/40 bg-white px-1.5 py-1 text-xs text-jokenia-dark focus:border-jokenia-gold focus:outline-none"
+                      />
+                      <Button
+                        variant="secondary"
+                        onClick={() => handlePrint(item, getPrintQuantity(item.item_id))}
+                        disabled={printingId === item.item_id}
+                      >
+                        {printingId === item.item_id ? 'Printing…' : 'Print label'}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
