@@ -8,6 +8,7 @@ import AccountSection from '@/components/settings/AccountSection'
 import DiagnosticsSection from '@/components/settings/DiagnosticsSection'
 import UsageSection from '@/components/settings/UsageSection'
 import AdminAccountsSection from '@/components/settings/AdminAccountsSection'
+import ChangePasswordSection from '@/components/settings/ChangePasswordSection'
 
 type SectionId =
   | 'updates'
@@ -15,6 +16,7 @@ type SectionId =
   | 'printing'
   | 'display'
   | 'account'
+  | 'password'
   | 'admin'
   | 'diagnostics'
   | 'usage'
@@ -38,6 +40,7 @@ const ALL_SECTIONS: {
   },
   { id: 'display', label: 'Display', description: 'Adjust the app UI zoom level.' },
   { id: 'account', label: 'Account', description: 'Signed-in user and session controls.' },
+  { id: 'password', label: 'Change Password', description: 'Update your account password.' },
   {
     id: 'admin',
     label: 'Admin Accounts',
@@ -104,6 +107,7 @@ function SettingsPage({ role, userEmail }: SettingsPageProps): React.JSX.Element
         {activeSection === 'printing' && <PrintingSection />}
         {activeSection === 'display' && <DisplaySection />}
         {activeSection === 'account' && <AccountSection role={role} userEmail={userEmail} />}
+        {activeSection === 'password' && <ChangePasswordSection userEmail={userEmail} />}
         {activeSection === 'admin' && <AdminAccountsSection />}
         {activeSection === 'diagnostics' && <DiagnosticsSection />}
         {activeSection === 'usage' && <UsageSection role={role} />}
