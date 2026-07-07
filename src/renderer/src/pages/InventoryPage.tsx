@@ -16,6 +16,7 @@ interface StockItem {
   serial_number: string
   variation_id: string
   type_name: string
+  variation_name: string
   sku: string
   barcode: string
   size: string | null
@@ -42,6 +43,7 @@ function buildSizeLabel(item: {
 interface VariationGroup {
   variation_id: string
   type_name: string
+  variation_name: string
   sku: string
   barcode: string
   size: string | null
@@ -62,6 +64,7 @@ function groupByVariation(items: StockItem[]): VariationGroup[] {
     map.set(item.variation_id, {
       variation_id: item.variation_id,
       type_name: item.type_name,
+      variation_name: item.variation_name,
       sku: item.sku,
       barcode: item.barcode,
       size: item.size,
@@ -163,6 +166,7 @@ function StockTab(): React.JSX.Element {
           serial_number: row.serial_number as string,
           variation_id: variationId,
           type_name: row.type_name as string,
+          variation_name: row.variation_name as string,
           sku: meta?.sku ?? '—',
           barcode: meta?.barcode ?? '',
           size: row.size as string | null,
@@ -191,6 +195,7 @@ function StockTab(): React.JSX.Element {
       (variation) =>
         variation.sku.toLowerCase().includes(query) ||
         variation.type_name.toLowerCase().includes(query) ||
+        variation.variation_name.toLowerCase().includes(query) ||
         variation.barcode.toLowerCase().includes(query)
     )
   }, [variations, search])
@@ -242,7 +247,7 @@ function StockTab(): React.JSX.Element {
         type="text"
         value={search}
         onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search by barcode, SKU, or product type…"
+        placeholder="Search by barcode, SKU, product type, or variation name…"
         className="mb-3 rounded-md border border-jokenia-tan/30 bg-white px-3 py-2 text-sm text-jokenia-dark focus:outline-none focus:ring-2 focus:ring-jokenia-gold"
       />
 
@@ -297,7 +302,12 @@ function StockTab(): React.JSX.Element {
                             : (variation.barcode || '—')}
                         </button>
                       </td>
-                      <td className="px-3 py-2 text-jokenia-dark">{variation.type_name}</td>
+                      <td className="px-3 py-2">
+                        <div className="text-jokenia-dark">{variation.type_name}</div>
+                        {variation.variation_name && (
+                          <div className="text-xs text-jokenia-tan">{variation.variation_name}</div>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-jokenia-dark">{variation.sku}</td>
                       <td className="px-3 py-2 text-jokenia-dark2">{buildSizeLabel(variation)}</td>
                       <td className="px-3 py-2 text-jokenia-dark2">{variation.items.length}</td>
