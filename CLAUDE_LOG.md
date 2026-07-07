@@ -2,6 +2,15 @@
 
 ---
 
+## Run summary — 2026-07-07 (session 12), dispatch drain
+
+One dispatch claimed and completed this run:
+1. **cb3030a2** (priority 4) — Stock tab Name column shows product type + variation name composite.
+
+2026-07-07 (session 12) EAT | Desktop App | src/renderer/src/pages/InventoryPage.tsx | **Read-first:** CLAUDE.md, CLAUDE_LOG.md (session 11/10 entries), `InventoryPage.tsx` in full, and live `pg_get_functiondef(get_all_stock_items)` to confirm `variation_name` is already part of the RPC's `RETURNS TABLE` (it is — `pv.name AS variation_name`, joined from `product_variations`) even though `StockItem`/`VariationGroup` never mapped it through. **Implementation:** added `variation_name: string` to both `StockItem` and `VariationGroup`, threaded it through `groupByVariation()`'s constructed object and `loadItems()`'s row-mapping `setItems(...)` call (straight passthrough from `row.variation_name`, no new query — the barcode-led restructure (commit 9035c42, v1.0.5) already fetches this RPC). Name cell now stacks `type_name` (primary) above `variation_name` (secondary, `text-xs text-jokenia-tan`, only rendered when non-empty) inside the existing cell — no new column added, no column removed. `filteredVariations` search predicate gained a fourth `.includes(query)` branch on `variation_name.toLowerCase()`, alongside the existing SKU/type-name/barcode matches; search placeholder text updated to mention variation name. Per the dispatch's explicit instruction, no de-duplication logic was added against the standalone Size column — the full variation name prints verbatim even when it restates the size. **Files not touched, confirmed via diff:** `utils/label.ts`, `ScanInput.tsx`, `Register.tsx`, `appStore.ts`, all RPC wrappers — no RPC call was added or changed, only a field already present in the existing response being read. `npm run typecheck`: 0 errors (both configs). Live verification (real Stock tab render showing two same-type variations now visibly distinguished) not performed — requires a live session; same constraint as every prior Desktop App session. Commit `e973572`. | Follow-up: none new. Still open from prior sessions: general live-verification backlog (see CLAUDE_DESKTOP "Still unverified").
+
+---
+
 ## Run summary — 2026-07-07 (session 11), v1.0.5 released
 
 Pre-release verification (typecheck, lint on touched files, production build) had already been run read-only in the prior turn — all clean, no code changes. This session pushed session 10's 5 local commits, bumped the version, and published the release.
