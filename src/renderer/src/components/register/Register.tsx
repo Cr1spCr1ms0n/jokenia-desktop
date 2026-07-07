@@ -71,6 +71,7 @@ function Register(): React.JSX.Element {
   const lastSaleId = useAppStore((state) => state.lastSaleId)
   const setLastSaleId = useAppStore((state) => state.setLastSaleId)
   const clearCart = useAppStore((state) => state.clearCart)
+  const hydrateChannelState = useAppStore((state) => state.hydrateChannelState)
 
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [lastSaleTotal, setLastSaleTotal] = useState<number | null>(null)
@@ -90,6 +91,15 @@ function Register(): React.JSX.Element {
     },
     enabled: saleChannel === 'market'
   })
+
+  // Register only ever mounts once authenticated (Zone 2 of AppShell), so this
+  // doubles as "hydrate persisted channel state on app start after auth"
+  // without needing App.tsx in scope. Runs once; a stale/inactive market
+  // event is validated and falls back to in_shop inside the store action.
+  useEffect(() => {
+    void hydrateChannelState()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Manual sale fields — not shared elsewhere, kept local to this component.
   const [manualDescription, setManualDescription] = useState('')
@@ -307,7 +317,13 @@ function Register(): React.JSX.Element {
           ))}
         </div>
 
-        <div>
+        <div
+          className={
+            saleChannel !== 'in_shop'
+              ? 'rounded-md ring-2 ring-jokenia-gold ring-offset-1 ring-offset-jokenia-cream'
+              : undefined
+          }
+        >
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-jokenia-tan">
             Channel
           </p>
@@ -513,6 +529,18 @@ function Register(): React.JSX.Element {
             placeholder="Receipt email (optional)"
             className="w-full rounded-md border border-jokenia-tan/40 bg-white px-3 py-2 text-sm text-jokenia-dark placeholder:text-jokenia-tan/60 focus:border-jokenia-gold focus:outline-none"
           />
+        )}
+
+        {saleChannel !== 'in_shop' && (
+          <div className="rounded-md border-2 border-jokenia-gold bg-jokenia-gold/15 px-2 py-1.5 text-center text-[11px] font-bold uppercase tracking-wide text-jokenia-dark">
+            {saleChannel === 'market'
+              ? `Market — ${marketEvents?.find((event) => event.id === marketEventId)?.name ?? 'Select event'}`
+              : `Online — ${
+                  onlinePlatform
+                    ? (PLATFORM_OPTIONS.find((option) => option.id === onlinePlatform)?.label ?? onlinePlatform)
+                    : 'Select platform'
+                }`}
+          </div>
         )}
 
         <div className="flex items-baseline justify-between font-heading">

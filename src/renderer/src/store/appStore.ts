@@ -1,13 +1,19 @@
 import { create } from 'zustand'
+import { supabase } from '@/lib/supabase'
 import type {
   CartLineItem,
   DiscountType,
+  MarketEvent,
   OnlinePlatform,
   PaymentEntry,
   SaleChannel,
   SaleTypeOption,
   TabId
 } from '@/types'
+
+const CHANNEL_KEY = 'checkout.saleChannel'
+const MARKET_EVENT_KEY = 'checkout.marketEventId'
+const PLATFORM_KEY = 'checkout.onlinePlatform'
 
 export function lineDiscountAmount(item: CartLineItem): number {
   const gross = item.unit_price * item.quantity
@@ -60,6 +66,8 @@ interface AppState {
   setIsConfirming: (val: boolean) => void
   setLastSaleId: (id: string | null) => void
   clearCart: () => void
+  hydrateChannelState: () => Promise<void>
+  clearChannelState: () => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -133,9 +141,18 @@ export const useAppStore = create<AppState>((set) => ({
     })),
 
   setSaleType: (saleType) => set({ saleType }),
-  setSaleChannel: (saleChannel) => set({ saleChannel }),
-  setOnlinePlatform: (onlinePlatform) => set({ onlinePlatform }),
-  setMarketEventId: (marketEventId) => set({ marketEventId }),
+  setSaleChannel: (saleChannel) => {
+    set({ saleChannel })
+    void window.electron.setPreference(CHANNEL_KEY, saleChannel)
+  },
+  setOnlinePlatform: (onlinePlatform) => {
+    set({ onlinePlatform })
+    void window.electron.setPreference(PLATFORM_KEY, onlinePlatform)
+  },
+  setMarketEventId: (marketEventId) => {
+    set({ marketEventId })
+    void window.electron.setPreference(MARKET_EVENT_KEY, marketEventId)
+  },
 
   addPayment: () => set((state) => ({ payments: [...state.payments, blankPayment()] })),
 
@@ -167,16 +184,60 @@ export const useAppStore = create<AppState>((set) => ({
   // setLastSaleId(id) then clearCart() in sequence, and the success
   // banner is driven by lastSaleId staying set until "New sale" is
   // clicked (setLastSaleId(null)).
+  // Also deliberately does not reset saleChannel/onlinePlatform/marketEventId —
+  // these persist across sales (and app restarts, via hydrateChannelState) so a
+  // market or online session doesn't silently drop back to in_shop mid-day.
   clearCart: () =>
     set({
       cart: [],
       customerEmail: '',
       isConfirming: false,
-      saleChannel: 'in_shop',
-      onlinePlatform: null,
-      marketEventId: null,
       payments: [blankPayment()]
+    }),
+
+  // Called once on Register mount (which only happens once authenticated),
+  // standing in for "app start after auth" without needing App.tsx in scope.
+  hydrateChannelState: async () => {
+    const [savedChannel, savedMarketEventId, savedPlatform] = await Promise.all([
+      window.electron.getPreference(CHANNEL_KEY),
+      window.electron.getPreference(MARKET_EVENT_KEY),
+      window.electron.getPreference(PLATFORM_KEY)
+    ])
+
+    let channel = (savedChannel as SaleChannel | undefined) ?? 'in_shop'
+    let marketEventId = (savedMarketEventId as string | null | undefined) ?? null
+    const onlinePlatform = (savedPlatform as OnlinePlatform | null | undefined) ?? null
+
+    if (channel === 'market' && marketEventId) {
+      const { data, error } = await supabase.rpc('get_market_events', {
+        p_include_inactive: false
+      })
+      const events = !error && data ? (data as MarketEvent[]) : []
+      const today = new Date().toISOString().slice(0, 10)
+      const event = events.find((e) => e.id === marketEventId)
+      const withinRange = !!event && today >= event.start_date && today <= event.end_date
+
+      if (!withinRange) {
+        channel = 'in_shop'
+        marketEventId = null
+        void window.electron.setPreference(CHANNEL_KEY, 'in_shop')
+        void window.electron.setPreference(MARKET_EVENT_KEY, null)
+      }
+    }
+
+    set({
+      saleChannel: channel,
+      marketEventId: channel === 'market' ? marketEventId : null,
+      onlinePlatform: channel === 'online' ? onlinePlatform : null
     })
+  },
+
+  clearChannelState: () => {
+    set({ saleChannel: 'in_shop', marketEventId: null, onlinePlatform: null })
+    void window.electron.setPreference(CHANNEL_KEY, 'in_shop')
+    void window.electron.setPreference(MARKET_EVENT_KEY, null)
+    void window.electron.setPreference(PLATFORM_KEY, null)
+  }
 }))
 
 export const selectCartTotal = (state: AppState): number =>

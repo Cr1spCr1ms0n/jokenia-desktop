@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
+import { useAppStore } from '@/store/appStore'
 import type { SystemRole } from '@/types'
 
 interface AccountSectionProps {
@@ -14,7 +15,10 @@ const ROLE_LABEL: Record<SystemRole, string> = {
 }
 
 function AccountSection({ role, userEmail }: AccountSectionProps): React.JSX.Element {
+  const clearChannelState = useAppStore((state) => state.clearChannelState)
+
   async function handleSignOut(): Promise<void> {
+    clearChannelState()
     await supabase.auth.signOut()
     // onAuthStateChange in App.tsx handles the redirect to Login automatically
   }
