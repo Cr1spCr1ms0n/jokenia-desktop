@@ -2,6 +2,22 @@
 
 ---
 
+## Run summary — 2026-07-07 (session 11), v1.0.5 released
+
+Pre-release verification (typecheck, lint on touched files, production build) had already been run read-only in the prior turn — all clean, no code changes. This session pushed session 10's 5 local commits, bumped the version, and published the release.
+
+**Commits pushed to `origin/main`:** the 5 dispatch-drain commits from session 10 (`51b9e05` → `1aa9885`, unchanged from that session) plus `b2440e2` (`chore: bump version to 1.0.5`).
+
+**GH_TOKEN handling:** Samuel initially pasted a raw PAT (`github_pat_...`) directly into chat using bash syntax (`$env:GH_TOKEN = "..."`, which is PowerShell syntax and errored in the bash shell it ran in — token was never actually set). Flagged to Samuel that the pasted token is now in the conversation transcript and should be considered exposed — recommended revoking/rotating it. Did not use, echo, or log that token anywhere. Used the documented approach instead: `$env:GH_TOKEN = (gh auth token)` in PowerShell, pulling from `gh`'s own already-authenticated session, set and consumed within the same tool call as `npm run release` (env vars don't persist across separate tool invocations in this harness).
+
+**Publish anomaly — duplicate draft again (electron-builder #6676, per CLAUDE.md §15's mandatory check):** `npm run release` logged "creating GitHub release" twice, and the post-publish check confirmed two draft objects both tagged `v1.0.5`: id `349989330` (exe + `latest.yml`) and id `349989331` (blockmap only). Recovery per §15: downloaded the blockmap asset from the incomplete duplicate (`349989331`, asset id `468724300`) via `gh api -H "Accept: application/octet-stream"`, confirmed it was byte-identical to the local build's own `dist/Jokenia-Operations-Setup-1.0.5.exe.blockmap` (`cmp`, no diff), then uploaded that local file onto the survivor (`349989330`) via `gh api --method POST` against the **absolute** `https://uploads.github.com/...` URL (a relative path 404'd — `gh api` doesn't route relative paths to the uploads host, only the absolute URL from the release's own `upload_url` field works). Verified all 3 assets present on `349989330`, then deleted the incomplete duplicate (`gh api -X DELETE repos/.../releases/349989331`) — by numeric id, not `gh release delete`, per the established ambiguous-tag precedent. Re-ran the duplicate check: exactly one `v1.0.5` release remained, all 3 assets intact. Un-drafted only after this confirmation (`gh release edit v1.0.5 --draft=false`). Stale old drafts from prior versions (v1.0.2, v1.0.3 lineage) were left untouched, per instruction.
+
+**Release:** [v1.0.5](https://github.com/Cr1spCr1ms0n/jokenia-desktop/releases/tag/v1.0.5), published (not draft). Assets: `Jokenia-Operations-Setup-1.0.5.exe`, `Jokenia-Operations-Setup-1.0.5.exe.blockmap`, `latest.yml`. Carries session 10's five features (ScanInput serial routing, checkout channel persistence, variation-barcode labels, barcode-led inventory view, explicit no-persist login policy) plus the `chore: bump version to 1.0.5` commit.
+
+2026-07-07 (session 11) EAT | Desktop App | package.json (version bump only — no application code touched) | Release mechanics for v1.0.5, covering session 10's five dispatch commits (`51b9e05`, `ac291fe`, `cdfdff0`, `9035c42`, `1aa9885`) plus this session's own `b2440e2` version bump. Precondition check passed: working tree was clean and `npm run typecheck` passed before pushing. Full sequence: `git push origin main` → version bump commit + push → `npm run release` → duplicate-draft check (found and fixed, see above) → un-draft → asset verification. | Follow-up: none new from this release itself. Still open from prior sessions: general live-verification backlog for session 10's features (real barcode scanner, real label printer, real market events, extended-session token refresh) — none of this was verified live before release, consistent with every prior Desktop App session's constraints; the shop PC will pick up v1.0.5 via `electron-updater` on its next launch.
+
+---
+
 ## Run summary — 2026-07-07 (session 10), sequential dispatch drain
 
 Multi-item ops-dispatch session. Entries below are appended per dispatch as the queue is drained; this run summary is updated as each item completes.
