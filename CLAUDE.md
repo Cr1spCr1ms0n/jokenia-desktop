@@ -188,13 +188,9 @@ USB HID barcode scanners present as keyboard devices — characters arrive at <5
 
 ---
 
-## 11. Admin Management (placeholder)
+## 11. Admin Management (implemented)
 
-Settings tab currently shows a placeholder note. Blocked on backend RPCs that don't exist yet:
-- `create_admin_account`
-- `deactivate_admin_account`
-
-Do not implement the Settings admin-management UI until a Backend session delivers these RPCs (tracked as a follow-up in CLAUDE_LOG.md).
+Settings has a dedicated "Admin Accounts" section (`components/settings/AdminAccountsSection.tsx`), gated `superAdminOnly` the same way the Usage section is (see §16's `ALL_SECTIONS`/`superAdminOnly` filter in `SettingsPage.tsx` — non-super_admin users can never reach it, via the section list itself, not just a role check inside the component). Backed by four SECURITY DEFINER RPCs, all live on production: `get_admin_accounts` (list), `create_admin_account`, `deactivate_admin_account` (mandatory reason, admin-only targets — cannot deactivate a super_admin), `reactivate_admin_account`. Create is a modal (`CreateAdminModal.tsx`) with the same password-visibility SVG toggle as `LoginPage.tsx`. All three mutations invalidate the `['admin-accounts']` react-query key.
 
 ---
 
@@ -221,6 +217,8 @@ Fonts: **Syne** (`font-heading`) for headings, **DM Sans** (`font-sans`, default
 - **electron-store must stay on v8.x.** v9+ is pure ESM; imported into the main process (built as CJS by electron-vite with `externalizeDepsPlugin`), `import Store from 'electron-store'` resolves to the wrong object shape and throws `TypeError: Store is not a constructor` at app launch. Pin `"electron-store": "^8.2.0"` — confirmed working with `npm run dev`.
 - **A local `.env` with real `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` is now required for `npm run dev`.** As of Phase 2 (auth flow), `App.tsx` imports `lib/supabase.ts` and calls `supabase.auth.getSession()` on mount. `createClient()` throws synchronously (`supabaseUrl is required.`) if the env vars are unset, which blanks the renderer before React mounts. Phase 1 never hit this because nothing imported the Supabase client yet. `.env` is gitignored — copy `.env.example` and fill in real values locally.
 - **Import `bwip-js` via its `bwip-js/browser` subpath, not the bare `bwip-js` specifier.** The package's root export map gates on custom condition keys (`browser`/`electron`/`node`) that `tsc`'s `moduleResolution: "bundler"` doesn't recognize without a `customConditions` tsconfig entry — `import bwipjs from 'bwip-js'` fails typecheck with `TS2307: Cannot find module`. `bwip-js/browser` resolves through standard `types`/`import`/`require` conditions instead. No separate `@types/bwip-js` package is needed — bwip-js ships its own bundled `.d.ts` files.
+- **Settings sections needing a super_admin gate reuse `SettingsPage.tsx`'s existing `ALL_SECTIONS`/`superAdminOnly` filter** (established by the Usage section, reused as-is by Admin Accounts) rather than a role prop + in-component early-return — the section is filtered out of the sidebar and out of the `?section=` deep-link match before the component ever mounts, so a non-super_admin can't reach it even via a crafted URL param. The RPC's own `SECURITY DEFINER` role check is the real enforcement boundary regardless; this filter is the UI-layer mirror of it.
+- **Settings-section mutations (create/deactivate/reactivate-style actions) call `supabase.rpc(...)` directly inside a local async handler with its own `submitting`/`error` state, then `queryClient.invalidateQueries({ queryKey: [...] })` on success** — same pattern as `components/services/NewTicketForm.tsx`/`TicketDetail.tsx`. Not `useMutation` — this codebase doesn't use react-query's mutation helper anywhere yet, so introducing it in one isolated component would be an inconsistent one-off.
 
 ---
 
