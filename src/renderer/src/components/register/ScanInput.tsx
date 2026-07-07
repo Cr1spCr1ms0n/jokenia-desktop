@@ -34,6 +34,7 @@ const BORDER_CLASSES: Record<ScanStatus, string> = {
 }
 
 const SEARCH_DEBOUNCE_MS = 300
+const SERIAL_PATTERN = /^\d{3}-\d{3}-[A-Za-z0-9]{4}-\d{5}$/
 
 async function searchVariations(query: string): Promise<SearchResultRow[]> {
   const { data, error } = await supabase.rpc('search_variations', {
@@ -83,13 +84,17 @@ function ScanInput({ isConfirming }: ScanInputProps): React.JSX.Element {
   function parseScanError(message: string): string {
     if (message === 'Barcode not recognised') return 'Item not found in system'
     if (message === 'No stock available for this product') return 'No stock available'
+    if (message === 'Serial number not recognised') return 'Item not found in system'
+    if (message.startsWith('Item is not available for sale')) return message
     return 'Scan error — try again'
   }
 
   async function handleScan(barcode: string): Promise<void> {
     setStatus('loading')
 
-    const { data, error } = await supabase.rpc('resolve_barcode', { p_barcode: barcode })
+    const { data, error } = SERIAL_PATTERN.test(barcode)
+      ? await supabase.rpc('resolve_serial', { p_serial: barcode })
+      : await supabase.rpc('resolve_barcode', { p_barcode: barcode })
 
     if (error) {
       setStatus('error')
