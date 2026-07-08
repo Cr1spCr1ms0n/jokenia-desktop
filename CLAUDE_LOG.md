@@ -2,7 +2,22 @@
 
 ---
 
-## Run summary — 2026-07-07 (session 15), dispatch drain
+## Run summary — 2026-07-08 (session 16), Dispatch Protocol v2 install + partners investigation
+
+Two items claimed this run (batch cap hit: 1 investigation-class item drains the cap for this run).
+1. **48ac1d10** (priority 3) — Install Dispatch Protocol v2 CLAUDE_OPS.md.
+2. **c0b23b25** (priority 4) — Investigate partners module RPC call sites after grant hardening.
+
+2026-07-08 (session 16) EAT | Desktop App | Dispatch 48ac1d10 (docs — install Dispatch Protocol v2 CLAUDE_OPS.md)
+STATUS: done
+FILES: CLAUDE_OPS.md, CLAUDE_LOG.md
+DONE: Replaced CLAUDE_OPS.md's full contents verbatim with the v2 lean version supplied in the dispatch prompt — session_type/project_id/ops_project header, a pointer to `context_documents.DISPATCH_PROTOCOL` (`cbvbixizegkbjwgsqzuh`) as the canonical run-loop procedure, the standing-authorization line, and a "Repo deltas" section (typecheck command, RPC-only writes rule, release duplicate-draft/gh-api reconciliation pointing at CLAUDE.md §15, GitHub PAT scope note). Read the old CLAUDE_OPS.md in full first, per the dispatch's mandatory read-first instruction, to check for repo-specific content the v2 replacement doesn't carry forward — see FOLLOW-UPS below, nothing was silently dropped or reintroduced into the new file (scope was verbatim replacement only). Also fetched and read the `DISPATCH_PROTOCOL` and `JOKENIA_GLOBAL` context docs (this dispatch's `context_refs`) before executing, plus `dispatch_types` rows for `docs` and `investigation` (`commit_policy`: local / none respectively) since this was the first v2 run and those rows govern this and the next item.
+TYPECHECK: not applicable — markdown only, per the dispatch's own instruction.
+COMMIT: local only, no push — pending (see commit step immediately following this log write, per commit_policy `local`).
+COST: active 5hr-block total (not isolable to this single dispatch item) via `npx ccusage@latest blocks --json`: ~$0.72 / ~1.13M tokens as of this entry, block started 2026-07-08T10:00 UTC.
+FOLLOW-UPS: three pieces of the old (v1) CLAUDE_OPS.md are not carried into the new lean v2 file and are not restated in JOKENIA_GLOBAL either — flagging rather than silently dropping, per the dispatch's instruction: (1) the note that Claude Code does not connect to the production Jokenia DB directly and inherits its Supabase MCP session from Claude Desktop, with no separate MCP config or PAT needed; (2) the Priority Scale table (1=critical, 3=high, 5=normal, 7=low) — the numbers are still used live in `dispatch_queue.priority` but their meanings are no longer documented anywhere in this repo; (3) the Status Lifecycle diagram (pending → claimed → done/failed) — functionally implied by DISPATCH_PROTOCOL's run loop but not spelled out as its own reference. None of these blocked executing this run; noting them for Chat Claude to fold into DISPATCH_PROTOCOL or JOKENIA_GLOBAL if judged worth keeping centrally.
+
+---
 
 1. **4a38981a** (priority 4) — App icon legible at small sizes (16/24/32px).
 2. **c4f5c150** (priority 5) — Release v1.0.6.
