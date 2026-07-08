@@ -19,6 +19,24 @@ FOLLOW-UPS: three pieces of the old (v1) CLAUDE_OPS.md are not carried into the 
 
 ---
 
+2026-07-08 (session 16) EAT | Desktop App | Dispatch c0b23b25 (investigation — partners module RPC call sites after grant hardening, read-only)
+STATUS: done
+FILES: CLAUDE_LOG.md only (investigation type — no source files modified, per its execution_rules and the dispatch's own explicit instruction).
+DONE: **Phase 1 (read).** Grepped the full renderer source for both RPC names. Two call sites, both direct `supabase.rpc(...)` calls (no typed wrapper layer for partners RPCs in this app):
+  - `get_partner_detail` — `src/renderer/src/components/partners/PartnerDetail.tsx:24`, inside `fetchContact()`, driving a `useQuery(['partner-contact', partnerId], ...)`.
+  - `return_partner_stock` — `src/renderer/src/components/partners/ReturnStockModal.tsx:42`, inside a `useMutation` triggered only by the modal's "Return Items" button.
+  Supabase client config (`src/renderer/src/lib/supabase.ts`): `createClient(url, VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: true } })` — anon key is the fixed `apikey` header on every request regardless of auth state, but the `Authorization` header (which PostgREST/`SECURITY DEFINER` grant checks actually key off) carries the signed-in user's JWT (`role: authenticated` claim) whenever a session exists, and is absent/anon-equivalent only when none does.
+  **Phase 2 (analyse).** Traced the render path both components sit on: `App.tsx` (lines 50–54) renders `<LoginPage/>` whenever `!session || !role || role === 'staff'`, and only renders `<AppShell role={role} .../>` once a session AND a non-staff role are both confirmed — there is no other entry point. `AppShell.tsx:44` mounts `PartnersPage` exclusively via its internal `<Routes>` (`<Route path="/partners" element={<PartnersPage/>} />`), which itself only renders inside the already-gated `AppShell` tree — confirmed no second, ungated mount point for `PartnersPage`/`PartnerDetail`/`ReturnStockModal` exists anywhere in the renderer (single grep hit each, both inside this one component tree). Consequently neither RPC call site can execute before a session exists (the whole subtree is unmounted pre-auth) or after a full sign-out completes (App.tsx's `onAuthStateChange` sets `session`/`role` to null synchronously on the `SIGNED_OUT` event, which unmounts `AppShell` and everything under it, including any open `ReturnStockModal`). The only theoretical edge case considered — an in-flight request issued a moment before sign-out completing server-side — would still carry a token that was valid at send time, which is normal request-in-flight behavior unrelated to the grant change, not a pre-auth/anon call.
+  **Phase 3 (report).**
+  **VERDICT: UNAFFECTED.** Both `get_partner_detail` (PartnerDetail.tsx:24) and `return_partner_stock` (ReturnStockModal.tsx:42) only ever fire from inside the auth-gated `AppShell` render tree; every call in this app's current code carries an authenticated user's JWT, never anon. No pre-auth or post-signout call path exists for either RPC. The revoked anon EXECUTE grant has no effect on this app's behavior.
+  **Incidental, out of this dispatch's scope:** `CLAUDE_DESKTOP`'s own Backlog section (read as this dispatch's context_ref) currently states "Partners — read-only list only; full workflow (dispatch/sale/return/settle) not yet ported" — that is stale; `PartnerDetail.tsx` already wires Dispatch/Return/Record Sale/Settle actions live (`DispatchStockModal`, `ReturnStockModal`, `RecordSaleModal`, `SettleModal`, all rendered from that one component). Not corrected here since this investigation's scope was RPC call-site safety, not doc upkeep, and its own stopping condition is report-only.
+TYPECHECK: not applicable — read-only investigation, no code changed.
+COMMIT: none (commit_policy: none for investigation type).
+COST: active 5hr-block total (not isolable to this single dispatch item) via `npx ccusage@latest blocks --json`: ~$1.23 / ~2.85M tokens as of this entry, same block as item 1 above (started 2026-07-08T10:00 UTC).
+FOLLOW-UPS: (1) `CLAUDE_DESKTOP` context doc's Backlog section is stale re: partners module scope (see above) — worth a doc-refresh dispatch. (2) Batch cap reached (1 investigation-class item per run) — queue had exactly these two items at run start; not re-checked for further pending items after this one, per the batch cap stopping rule.
+
+---
+
 1. **4a38981a** (priority 4) — App icon legible at small sizes (16/24/32px).
 2. **c4f5c150** (priority 5) — Release v1.0.6.
 3. **746113cc** (priority 6) — CLAUDE_DESKTOP context doc refresh.
